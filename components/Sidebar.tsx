@@ -4,11 +4,14 @@ import Link from "next/link";
 
 import {
   usePathname,
+  useRouter,
 } from "next/navigation";
 
 import {
   useState,
 } from "react";
+
+import { supabase } from "@/lib/supabase";
 
 const menuItems = [
   {
@@ -27,9 +30,24 @@ const menuItems = [
     icon: "🧵",
   },
   {
+    label: "Clientes",
+    href: "/clientes",
+    icon: "👥",
+  },
+  {
     label: "Empresa",
     href: "/empresa",
     icon: "🏢",
+  },
+  {
+    label: "Calculadora",
+    href: "/calculadora",
+    icon: "🧮",
+  },
+  {
+    label: "Configurações IA",
+    href: "/configuracoes",
+    icon: "⚙️",
   },
 ];
 
@@ -37,8 +55,17 @@ export function Sidebar() {
   const pathname =
     usePathname();
 
+  const router =
+    useRouter();
+
   const [open, setOpen] =
     useState(false);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+
+    router.push("/login");
+  }
 
   return (
     <>
@@ -57,7 +84,7 @@ export function Sidebar() {
           border-slate-800
           bg-slate-950
           px-4
-          py-4
+          py-3
 
           md:hidden
         "
@@ -68,23 +95,30 @@ export function Sidebar() {
           }
           className="
             flex
-            h-11
-            w-11
+            h-10
+            w-10
             items-center
             justify-center
-            rounded-xl
+            rounded-lg
             bg-slate-800
             text-white
+            text-lg
           "
         >
           ☰
         </button>
 
-        <h1 className="text-lg font-bold text-white">
+        <h1
+          className="
+            text-lg
+            font-bold
+            text-white
+          "
+        >
           Precifica+
         </h1>
 
-        <div className="w-11" />
+        <div className="w-10" />
       </div>
 
       {/* OVERLAY */}
@@ -111,23 +145,29 @@ export function Sidebar() {
           fixed
           top-0
           left-0
+
+          md:sticky
+          md:top-0
+
           z-50
           flex
           h-screen
-          w-[280px]
+          w-[240px]
           flex-col
           justify-between
           bg-slate-950
-          px-6
-          py-8
+          px-4
+          py-5
           text-white
           transition-transform
           duration-300
 
+          -translate-x-full
+
           ${
             open
               ? "translate-x-0"
-              : "-translate-x-full"
+              : ""
           }
 
           md:translate-x-0
@@ -136,16 +176,35 @@ export function Sidebar() {
         <div>
           {/* HEADER */}
           <div className="mb-10">
-            <div className="mb-4 flex items-center justify-between">
+            <div
+              className="
+                mb-4
+                flex
+                items-center
+                justify-between
+              "
+            >
               <div>
-                <h1 className="text-4xl font-black tracking-tight">
+                <h1
+                  className="
+                    text-4xl
+                    font-black
+                    tracking-tight
+                  "
+                >
                   Precifica+
                 </h1>
 
-                <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                  Plataforma
-                  inteligente de
-                  precificação
+                <p
+                  className="
+                    mt-3
+                    text-sm
+                    leading-relaxed
+                    text-slate-400
+                  "
+                >
+                  Plataforma inteligente
+                  de precificação
                   artesanal
                 </p>
               </div>
@@ -156,9 +215,15 @@ export function Sidebar() {
                   setOpen(false)
                 }
                 className="
-                  rounded-xl
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-lg
                   bg-slate-800
-                  p-2
+                  text-xl
+                  text-white
 
                   md:hidden
                 "
@@ -168,69 +233,94 @@ export function Sidebar() {
             </div>
           </div>
 
-          {/* NAVIGATION */}
-          <nav className="flex flex-col gap-3">
-            {menuItems.map(
-              (item) => {
-                const active =
-                  pathname ===
-                  item.href;
+          {/* MENU */}
+          <nav
+            className="
+              flex
+              flex-col
+              gap-3
+            "
+          >
+            {menuItems.map((item) => {
+              const active =
+                pathname === item.href;
 
-                return (
-                  <Link
-                    key={
-                      item.href
-                    }
-                    href={
-                      item.href
-                    }
-                    onClick={() =>
-                      setOpen(
-                        false
-                      )
-                    }
-                    className={`
-                      flex
-                      items-center
-                      gap-4
-                      rounded-2xl
-                      px-5
-                      py-4
-                      text-lg
-                      transition-all
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() =>
+                    setOpen(false)
+                  }
+                  className={`
+                    flex
+                    items-center
+                    gap-4
+                    rounded-2xl
+                    px-4
+                    py-4
+                    text-lg
+                    font-semibold
+                    transition-all
+                    duration-200
 
-                      ${
-                        active
-                          ? "bg-slate-800 font-bold text-white shadow-lg"
-                          : "text-slate-300 hover:bg-slate-900 hover:text-white"
-                      }
-                    `}
-                  >
-                    <span className="text-2xl">
-                      {
-                        item.icon
-                      }
-                    </span>
+                    ${
+                      active
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-300 hover:bg-slate-900 hover:text-white"
+                    }
+                  `}
+                >
+                  <span className="text-2xl">
+                    {item.icon}
+                  </span>
 
-                    {item.label}
-                  </Link>
-                );
-              }
-            )}
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
         {/* FOOTER */}
-        <div className="border-t border-slate-800 pt-6">
-          <p className="text-sm text-slate-500">
-            SaaS Artesanal ©
-            2025
+        <div
+          className="
+            border-t
+            border-slate-800
+            pt-6
+          "
+        >
+          <button
+            onClick={handleLogout}
+            className="
+              mb-5
+              w-full
+              rounded-2xl
+              bg-slate-800
+              px-4
+              py-4
+              text-base
+              font-bold
+              text-white
+              transition-all
+
+              hover:bg-red-600
+            "
+          >
+            Sair
+          </button>
+
+          <p
+            className="
+              text-center
+              text-xs
+              text-slate-500
+            "
+          >
+            SaaS Artesanal © 2025
           </p>
         </div>
       </aside>
-
-      {/* DESKTOP SPACING */}
-      <div className="hidden w-[280px] md:block" />
     </>
   );
 }

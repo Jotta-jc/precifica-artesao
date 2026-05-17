@@ -1,9 +1,15 @@
+"use client";
+
 import type { Metadata } from "next";
 
 import {
   Geist,
   Geist_Mono,
 } from "next/font/google";
+
+import {
+  usePathname,
+} from "next/navigation";
 
 import "./globals.css";
 
@@ -19,17 +25,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Precifica+",
-  description:
-    "SaaS inteligente de precificação artesanal",
-};
+const hiddenSidebarRoutes = [
+  "/login",
+  "/auth/callback",
+];
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname =
+    usePathname();
+
+  const hideSidebar =
+    hiddenSidebarRoutes.some(
+      (route) =>
+        pathname.startsWith(route)
+    );
+
   return (
     <html
       lang="pt-BR"
@@ -37,23 +51,26 @@ export default function RootLayout({
     >
       <body
         className="
-          min-h-screen
           bg-gray-100
           text-slate-900
-          antialiased
         "
       >
         <div className="flex min-h-screen">
-          <Sidebar />
+          {!hideSidebar && (
+            <Sidebar />
+          )}
 
-          <main
-            className="
-              flex-1
-              overflow-x-hidden
-            "
-          >
-            {children}
-          </main>
+<main
+  className="
+    flex-1
+    pt-[72px]
+
+    md:ml-[280px]
+    md:pt-0
+  "
+>
+  {children}
+</main>
         </div>
       </body>
     </html>

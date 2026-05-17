@@ -1,18 +1,18 @@
 import { supabase } from "@/lib/supabase";
 
-export async function getBusinessMetrics(
+export async function getPricingSettings(
   userId: string
 ) {
   const { data, error } =
     await supabase
-      .from("business_metrics")
+      .from("pricing_settings")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", {
         ascending: false,
       })
       .limit(1)
-      .single();
+      .maybeSingle();
 
   if (error) {
     console.log(error);
@@ -23,56 +23,56 @@ export async function getBusinessMetrics(
   return data;
 }
 
-type UpdateBusinessMetricsParams = {
+type UpdatePricingSettingsParams = {
   userId: string;
 
-  nivel_demanda: number;
+  demand_weight: number;
 
-  nivel_marca: number;
+  brand_weight: number;
 
-  instagram_seguidores: number;
+  social_weight: number;
 
-  tiktok_seguidores: number;
+  premium_multiplier: number;
 
-  score_artesanal: number;
+  ai_multiplier: number;
 
-  meta_faturamento: number;
+  labor_weight: number;
 
-  dias_trabalhados: number;
+  material_weight: number;
 
-  horas_por_dia: number;
+  exclusivity_weight: number;
 
-  valor_hora: number;
+  urgency_weight: number;
 };
 
-export async function updateBusinessMetrics({
+export async function updatePricingSettings({
   userId,
 
-  nivel_demanda,
+  demand_weight,
 
-  nivel_marca,
+  brand_weight,
 
-  instagram_seguidores,
+  social_weight,
 
-  tiktok_seguidores,
+  premium_multiplier,
 
-  score_artesanal,
+  ai_multiplier,
 
-  meta_faturamento,
+  labor_weight,
 
-  dias_trabalhados,
+  material_weight,
 
-  horas_por_dia,
+  exclusivity_weight,
 
-  valor_hora,
-}: UpdateBusinessMetricsParams) {
+  urgency_weight,
+}: UpdatePricingSettingsParams) {
   /* =========================
-     VERIFICA EXISTENTE
+     EXISTENTE
   ========================== */
 
   const { data: existing } =
     await supabase
-      .from("business_metrics")
+      .from("pricing_settings")
       .select("id")
       .eq("user_id", userId)
       .order("created_at", {
@@ -88,25 +88,25 @@ export async function updateBusinessMetrics({
   if (existing) {
     const { data, error } =
       await supabase
-        .from("business_metrics")
+        .from("pricing_settings")
         .update({
-          nivel_demanda,
+          demand_weight,
 
-          nivel_marca,
+          brand_weight,
 
-          instagram_seguidores,
+          social_weight,
 
-          tiktok_seguidores,
+          premium_multiplier,
 
-          score_artesanal,
+          ai_multiplier,
 
-          meta_faturamento,
+          labor_weight,
 
-          dias_trabalhados,
+          material_weight,
 
-          horas_por_dia,
+          exclusivity_weight,
 
-          valor_hora,
+          urgency_weight,
         })
         .eq("id", existing.id)
         .select()
@@ -127,27 +127,27 @@ export async function updateBusinessMetrics({
 
   const { data, error } =
     await supabase
-      .from("business_metrics")
+      .from("pricing_settings")
       .insert({
         user_id: userId,
 
-        nivel_demanda,
+        demand_weight,
 
-        nivel_marca,
+        brand_weight,
 
-        instagram_seguidores,
+        social_weight,
 
-        tiktok_seguidores,
+        premium_multiplier,
 
-        score_artesanal,
+        ai_multiplier,
 
-        meta_faturamento,
+        labor_weight,
 
-        dias_trabalhados,
+        material_weight,
 
-        horas_por_dia,
+        exclusivity_weight,
 
-        valor_hora,
+        urgency_weight,
       })
       .select()
       .single();

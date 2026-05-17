@@ -1,73 +1,116 @@
 "use client";
 
+import { useState } from "react";
+
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
+  const [loading, setLoading] =
+    useState(false);
+
   async function loginGoogle() {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: "http://localhost:3000/auth/callback",
-      },
-    });
+    try {
+      setLoading(true);
+
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+    } catch (error) {
+      console.log(error);
+
+      alert(
+        "Erro ao realizar login"
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f3f4f6",
-      }}
+      className="
+        flex
+        min-h-screen
+        items-center
+        justify-center
+        bg-gray-100
+        p-6
+      "
     >
       <div
-        style={{
-          backgroundColor: "#ffffff",
-          padding: "40px",
-          borderRadius: "24px",
-          border: "1px solid #e5e7eb",
-          width: "100%",
-          maxWidth: "420px",
-        }}
+        className="
+          w-full
+          max-w-md
+          rounded-3xl
+          border
+          border-slate-200
+          bg-white
+          p-8
+          shadow-sm
+        "
       >
-        <h1
-          style={{
-            fontSize: "42px",
-            color: "#111827",
-            marginBottom: "16px",
-          }}
-        >
-          Login
-        </h1>
+        <div className="mb-8">
+          <h1
+            className="
+              text-4xl
+              font-black
+              text-slate-900
+            "
+          >
+            Precifica+
+          </h1>
 
-        <p
-          style={{
-            fontSize: "20px",
-            color: "#6b7280",
-            marginBottom: "32px",
-          }}
-        >
-          Entre com sua conta Google 🚀
-        </p>
+          <p
+            className="
+              mt-4
+              text-lg
+              leading-relaxed
+              text-slate-500
+            "
+          >
+            Plataforma inteligente de
+            valorização artesanal 🚀
+          </p>
+        </div>
 
         <button
           onClick={loginGoogle}
-          style={{
-            width: "100%",
-            padding: "18px",
-            borderRadius: "14px",
-            border: "none",
-            backgroundColor: "#111827",
-            color: "#ffffff",
-            fontSize: "22px",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
+          disabled={loading}
+          className="
+            w-full
+            rounded-2xl
+            bg-slate-900
+            px-6
+            py-5
+            text-lg
+            font-bold
+            text-white
+            transition-all
+            hover:bg-slate-800
+            disabled:opacity-70
+          "
         >
-          Entrar com Google
+          {loading
+            ? "Entrando..."
+            : "Entrar com Google"}
         </button>
+
+        <p
+          className="
+            mt-6
+            text-center
+            text-sm
+            leading-relaxed
+            text-slate-400
+          "
+        >
+          Ao entrar você acessa sua
+          central estratégica artesanal.
+        </p>
       </div>
     </main>
   );
