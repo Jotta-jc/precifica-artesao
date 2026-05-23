@@ -190,7 +190,10 @@ export default function ProdutoDetalhePage() {
   ] = useState(1);
 
   const [nivelMarca, setNivelMarca] =
-    useState(1);
+  useState(1);
+  
+const [hourlyRate, setHourlyRate] =
+  useState(0);
 
   const [
     salvandoValorizacao,
@@ -304,6 +307,11 @@ export default function ProdutoDetalhePage() {
               1
           );
 
+          setHourlyRate(
+  Number(
+    businessMetrics.valor_hora || 0
+  )
+);
           setNivelMarca(
             businessMetrics.nivel_marca ||
               1
@@ -341,16 +349,18 @@ export default function ProdutoDetalhePage() {
       );
     }, [productMaterials]);
 
-  const maoDeObra = useMemo(() => {
-    if (!product) return 0;
+const maoDeObra = useMemo(() => {
+  if (!product) return 0;
 
-    return (
-      Number(
-        product.tempo_producao || 0
-      ) *
-      Number(product.valor_hora || 0)
-    );
-  }, [product]);
+  return (
+    Number(
+      product.tempo_producao || 0
+    ) * hourlyRate
+  );
+}, [
+  product,
+  hourlyRate,
+]);
 
   const multiplicadorValorizacao =
     useMemo(() => {
@@ -492,8 +502,6 @@ export default function ProdutoDetalhePage() {
             tempo_producao:
               product?.tempo_producao ||
               0,
-            valor_hora:
-              product?.valor_hora || 0,
           })
           .eq("id", productId);
 
@@ -617,7 +625,7 @@ export default function ProdutoDetalhePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 p-4 md:p-8">
+    <main className="min-h-full bg-gray-100 p-4 md:p-8">
       <div className="mb-10">
         <h1 className="text-3xl font-black text-slate-900 md:text-5xl">
           {product.nome}
@@ -726,45 +734,6 @@ export default function ProdutoDetalhePage() {
                     ? {
                         ...prev,
                         tempo_producao:
-                          Number(
-                            e.target
-                              .value
-                          ),
-                      }
-                    : null
-                )
-              }
-              className="
-                w-full
-                rounded-xl
-                border
-                border-slate-300
-                bg-white
-                p-3
-                outline-none
-                transition
-                focus:border-green-500
-              "
-            />
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <strong className="mb-2 block text-sm text-slate-500">
-              Valor Hora
-            </strong>
-
-            <input
-              type="number"
-              value={
-                product.valor_hora ||
-                0
-              }
-              onChange={(e) =>
-                setProduct((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        valor_hora:
                           Number(
                             e.target
                               .value

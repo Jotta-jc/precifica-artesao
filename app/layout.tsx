@@ -55,23 +55,23 @@ export default function RootLayout({
           text-slate-900
         "
       >
-        <div className="flex min-h-screen">
-          {!hideSidebar && (
-            <Sidebar />
-          )}
+<div className="flex min-h-screen">
+  {!hideSidebar && (
+    <Sidebar />
+  )}
 
-<main
-  className="
-    flex-1
-    pt-[72px]
+  <main
+    className="
+      flex-1
+      pt-[72px]
 
-    md:ml-[280px]
-    md:pt-0
-  "
->
-  {children}
-</main>
-        </div>
+      md:pl-[220px]
+      md:pt-0
+    "
+  >
+    {children}
+  </main>
+</div>
       </body>
     </html>
   );

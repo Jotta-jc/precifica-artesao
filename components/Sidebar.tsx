@@ -145,9 +145,7 @@ export function Sidebar() {
           fixed
           top-0
           left-0
-
-          md:sticky
-          md:top-0
+     
 
           z-50
           flex

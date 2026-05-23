@@ -624,7 +624,14 @@ const intelligentPrice =
   }
 
   return (
-    <div className="space-y-8">
+<div
+  className="
+    min-h-screen
+    space-y-8
+    p-6
+    md:p-10
+  "
+>
       {/* HEADER */}
       <div>
         <h1

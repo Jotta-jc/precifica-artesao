@@ -228,8 +228,15 @@ export default function ConfiguracoesPage() {
     );
   }
 
-  return (
-    <div className="space-y-8">
+return (
+  <div
+    className="
+      min-h-screen
+      space-y-8
+      p-6
+      md:p-10
+    "
+  >
       <div>
         <h1
           className="
