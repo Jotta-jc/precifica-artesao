@@ -7,9 +7,11 @@ import {
   useState,
 } from "react";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ProdutosPage() {
+  const supabase = createClient();
+  
   const [openModal, setOpenModal] =
     useState(false);
 
@@ -92,16 +94,21 @@ export default function ProdutosPage() {
         "Produto atualizado com sucesso ✏️"
       );
     } else {
-      const { error } =
-        await supabase
-          .from("products")
-          .insert({
-            nome,
-            categoria,
-            preco: Number(preco),
-          });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-      if (error) {
+  const { error } =
+    await supabase
+      .from("products")
+      .insert({
+        nome,
+        categoria,
+        preco: Number(preco),
+        user_id: user?.id,
+      });
+
+  if (error) {
         console.log(error);
 
         alert(error.message);

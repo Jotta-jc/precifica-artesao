@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 import { DashboardCard } from "@/components/DashboardCard";
 
@@ -26,6 +26,7 @@ type Material = {
 };
 
 export default function Dashboard() {
+  const supabase = createClient();
   const [loading, setLoading] =
     useState(true);
 

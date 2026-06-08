@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 import {
   getBusinessMetrics,
@@ -15,6 +15,7 @@ import {
 } from "@/services/pricingSettings.service";
 
 export default function EmpresaPage() {
+  const supabase = createClient();
   /* =========================
      POSICIONAMENTO
   ========================== */

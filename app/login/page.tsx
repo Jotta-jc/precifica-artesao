@@ -1,40 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
+const supabase = createClient();
+
   const [loading, setLoading] =
     useState(false);
 
-  async function loginGoogle() {
-    try {
-      setLoading(true);
+  useEffect(() => {
+    async function checkUser() {
+      const {
+        data: { session },
+      } =
+        await supabase.auth.getSession();
 
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-    } catch (error) {
-      console.log(error);
-
-      alert(
-        "Erro ao realizar login"
-      );
-    } finally {
-      setLoading(false);
+      if (session) {
+        router.replace(
+          "/dashboard"
+        );
+      }
     }
-  }
 
+    checkUser();
+  }, [router]);
+
+async function loginGoogle() {
+  try {
+    setLoading(true);
+
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+
+    alert("Erro ao realizar login");
+  } finally {
+    setLoading(false);
+  }
+}
   return (
     <main
       className="
         flex
-        min-h-screen
+        min-h-full
         items-center
         justify-center
         bg-gray-100

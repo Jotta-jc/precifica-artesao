@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 import {
   getPricingSettings,
@@ -10,6 +10,7 @@ import {
 } from "@/services/pricingSettings.service";
 
 export default function ConfiguracoesPage() {
+  const supabase = createClient();
   const [loading, setLoading] =
     useState(false);
 

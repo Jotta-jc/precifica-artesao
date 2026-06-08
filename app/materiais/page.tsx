@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export default function MateriaisPage() {
+  const supabase = createClient();
   const [materiais, setMateriais] = useState<any[]>([]);
 
   const [nome, setNome] = useState("");

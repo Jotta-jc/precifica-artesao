@@ -8,7 +8,7 @@ import {
 
 import { useParams } from "next/navigation";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 import { getBusinessMetrics } from "@/services/businessMetrics";
 
@@ -142,6 +142,7 @@ function SelectField({
 }
 
 export default function ProdutoDetalhePage() {
+  const supabase = createClient();
   const params = useParams();
 
   const productId = params.id;

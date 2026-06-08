@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 const menuItems = [
   {
@@ -52,6 +52,7 @@ const menuItems = [
 ];
 
 export function Sidebar() {
+  const supabase = createClient();
   const pathname =
     usePathname();
 
