@@ -8,6 +8,7 @@ import {
 } from "next/navigation";
 
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -40,6 +41,11 @@ const menuItems = [
     icon: "🏢",
   },
   {
+  label: "Calculadora Rápida",
+  href: "/calculadora-rapida",
+  icon: "⚡",
+},
+  {
     label: "Calculadora",
     href: "/calculadora",
     icon: "🧮",
@@ -61,6 +67,38 @@ export function Sidebar() {
 
   const [open, setOpen] =
     useState(false);
+
+    const [nomeEmpresa, setNomeEmpresa] =
+  useState("Precifica+");
+
+  useEffect(() => {
+  async function carregarEmpresa() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data } =
+      await supabase
+        .from("business_metrics")
+        .select("nome_empresa")
+        .eq("user_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        })
+        .limit(1)
+        .single();
+
+    if (data?.nome_empresa) {
+      setNomeEmpresa(
+        data.nome_empresa
+      );
+    }
+  }
+
+  carregarEmpresa();
+}, []);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -194,18 +232,9 @@ export function Sidebar() {
                   Precifica+
                 </h1>
 
-                <p
-                  className="
-                    mt-3
-                    text-sm
-                    leading-relaxed
-                    text-slate-400
-                  "
-                >
-                  Plataforma inteligente
-                  de precificação
-                  artesanal
-                </p>
+<p className="mt-3 text-lg font-semibold text-slate-300">
+  {nomeEmpresa}
+</p>
               </div>
 
               {/* CLOSE MOBILE */}

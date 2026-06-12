@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+
 const supabase = createClient();
 
 export async function getBusinessMetrics(
@@ -27,15 +28,11 @@ export async function getBusinessMetrics(
 type UpdateBusinessMetricsParams = {
   userId: string;
 
+  nome_empresa: string;
+
   nivel_demanda: number;
 
   nivel_marca: number;
-
-  instagram_seguidores: number;
-
-  tiktok_seguidores: number;
-
-  score_artesanal: number;
 
   meta_faturamento: number;
 
@@ -49,15 +46,11 @@ type UpdateBusinessMetricsParams = {
 export async function updateBusinessMetrics({
   userId,
 
+  nome_empresa,
+
   nivel_demanda,
 
   nivel_marca,
-
-  instagram_seguidores,
-
-  tiktok_seguidores,
-
-  score_artesanal,
 
   meta_faturamento,
 
@@ -91,15 +84,11 @@ export async function updateBusinessMetrics({
       await supabase
         .from("business_metrics")
         .update({
+          nome_empresa,
+
           nivel_demanda,
 
           nivel_marca,
-
-          instagram_seguidores,
-
-          tiktok_seguidores,
-
-          score_artesanal,
 
           meta_faturamento,
 
@@ -132,15 +121,11 @@ export async function updateBusinessMetrics({
       .insert({
         user_id: userId,
 
+        nome_empresa,
+
         nivel_demanda,
 
         nivel_marca,
-
-        instagram_seguidores,
-
-        tiktok_seguidores,
-
-        score_artesanal,
 
         meta_faturamento,
 

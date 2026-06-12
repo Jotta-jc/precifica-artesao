@@ -28,6 +28,9 @@ type Product = {
   complexidade: number;
   exclusividade: number;
   nivel_tecnico: number;
+
+  embalagem: number;
+  custos_extras: number;
 };
 
 type Material = {
@@ -150,6 +153,12 @@ export default function ProdutoDetalhePage() {
   const [product, setProduct] =
     useState<Product | null>(null);
 
+    const [embalagem, setEmbalagem] =
+  useState(0);
+
+const [custosExtras, setCustosExtras] =
+  useState(0);
+
   const [materials, setMaterials] =
     useState<Material[]>([]);
 
@@ -235,6 +244,18 @@ const [hourlyRate, setHourlyRate] =
     setNivelTecnico(
       data?.nivel_tecnico || 1
     );
+
+    setEmbalagem(
+  Number(
+    data?.embalagem || 0
+  )
+);
+
+setCustosExtras(
+  Number(
+    data?.custos_extras || 0
+  )
+);
   }
 
   async function carregarMateriais() {
@@ -340,15 +361,24 @@ const [hourlyRate, setHourlyRate] =
     carregarDados();
   }, []);
 
-  const custoTotalProduto =
-    useMemo(() => {
-      return productMaterials.reduce(
+const custoTotalProduto =
+  useMemo(() => {
+    if (!product) return 0;
+
+    return (
+      productMaterials.reduce(
         (acc, item) =>
           acc +
           Number(item.custo_total),
         0
-      );
-    }, [productMaterials]);
+      ) +
+      Number(product.embalagem || 0) +
+      Number(product.custos_extras || 0)
+    );
+  }, [
+    productMaterials,
+    product,
+  ]);
 
 const maoDeObra = useMemo(() => {
   if (!product) return 0;
@@ -358,45 +388,92 @@ const maoDeObra = useMemo(() => {
       product.tempo_producao || 0
     ) * hourlyRate
   );
+  
 }, [
   product,
   hourlyRate,
 ]);
 
-  const multiplicadorValorizacao =
-    useMemo(() => {
-      const fatorComplexidade =
-        Number(complexidade || 1) *
-        0.08;
 
-      const fatorExclusividade =
-        Number(exclusividade || 1) *
-        0.08;
+const complexityPointsMap: Record<
+  number,
+  number
+> = {
+  1: 5,
+  2: 10,
+  3: 15,
+  4: 25,
+};
 
-      const fatorTecnico =
-        Number(nivelTecnico || 1) *
-        0.1;
+const knowledgePointsMap: Record<
+  number,
+  number
+> = {
+  1: 5,
+  2: 10,
+  3: 15,
+  4: 20,
+};
 
-      const fatorDemanda =
-        Number(nivelDemanda || 1) *
-        0.12;
+const demandPointsMap: Record<
+  number,
+  number
+> = {
+  1: 0,
+  2: 5,
+  3: 10,
+  4: 15,
+};
 
-      const fatorMarca =
-        Number(nivelMarca || 1) *
-        0.12;
+const recognitionPointsMap: Record<
+  number,
+  number
+> = {
+  1: 5,
+  2: 10,
+  3: 20,
+  4: 30,
+};
 
-      return (
-        1 +
-        fatorComplexidade +
-        fatorExclusividade +
-        fatorTecnico +
-        fatorDemanda +
-        fatorMarca
-      );
+const officialMargin =
+  (complexityPointsMap[
+    Number(complexidade)
+  ] || 0) +
+  (knowledgePointsMap[
+    Number(nivelTecnico)
+  ] || 0) +
+  (demandPointsMap[
+    Number(nivelDemanda)
+  ] || 0) +
+  (recognitionPointsMap[
+    Number(nivelMarca)
+  ] || 0);
+
+const multiplicadorValorizacao =
+  useMemo(() => {
+    const complexityPoints =
+      complexityPointsMap[
+        Number(complexidade)
+      ] || 0;
+
+    const knowledgePoints =
+      knowledgePointsMap[
+        Number(nivelTecnico)
+      ] || 0;
+
+    const officialMargin =
+      complexityPoints +
+      knowledgePoints +
+      nivelDemanda +
+      nivelMarca;
+
+    return (
+1 +
+officialMargin / 100
+    );
     }, [
       complexidade,
-      exclusividade,
-      nivelTecnico,
+            nivelTecnico,
       nivelDemanda,
       nivelMarca,
     ]);
@@ -427,19 +504,79 @@ const maoDeObra = useMemo(() => {
       maoDeObra,
     ]);
 
-  const scoreArtesanal =
-    useMemo(() => {
-      const score =
-        complexidade * 10 +
-        exclusividade * 10 +
-        nivelTecnico * 12 +
-        nivelDemanda * 8 +
-        nivelMarca * 10;
+    const premiumPrice =
+  (custoTotalProduto + maoDeObra) *
+  (1 + officialMargin / 100);
+
+const recommendedPrice =
+  (custoTotalProduto + maoDeObra) *
+  (1 +
+    officialMargin *
+      0.9 /
+      100);
+
+const minimumPrice =
+  (custoTotalProduto + maoDeObra) *
+  (1 +
+    officialMargin *
+      0.8 /
+      100);
+
+const premiumProfit =
+  premiumPrice -
+  (custoTotalProduto + maoDeObra);
+
+const recommendedProfit =
+  recommendedPrice -
+  (custoTotalProduto + maoDeObra);
+
+const minimumProfit =
+  minimumPrice -
+  (custoTotalProduto + maoDeObra);
+
+const premiumMargin =
+  premiumPrice > 0
+    ? (premiumProfit /
+        premiumPrice) *
+      100
+    : 0;
+
+const recommendedMargin =
+  recommendedPrice > 0
+    ? (recommendedProfit /
+        recommendedPrice) *
+      100
+    : 0;
+
+const minimumMargin =
+  minimumPrice > 0
+    ? (minimumProfit /
+        minimumPrice) *
+      100
+    : 0;
+
+const scoreArtesanal =
+  useMemo(() => {
+
+const complexityPoints =
+  complexityPointsMap[
+    Number(complexidade)
+  ] || 0;
+
+const knowledgePoints =
+  knowledgePointsMap[
+    Number(nivelTecnico)
+  ] || 0;
+
+const score =
+  complexityPoints +
+  knowledgePoints +
+  nivelDemanda +
+  nivelMarca;
 
       return Math.min(score, 100);
     }, [
       complexidade,
-      exclusividade,
       nivelTecnico,
       nivelDemanda,
       nivelMarca,
@@ -491,19 +628,25 @@ const maoDeObra = useMemo(() => {
       const { error } =
         await supabase
           .from("products")
-          .update({
-            complexidade,
-            exclusividade,
-            nivel_tecnico:
-              nivelTecnico,
-            preco_sugerido:
-              precoSugerido,
-            mao_obra:
-              maoDeObra,
-            tempo_producao:
-              product?.tempo_producao ||
-              0,
-          })
+.update({
+  complexidade,
+  exclusividade,
+  nivel_tecnico:
+    nivelTecnico,
+  preco_sugerido:
+    precoSugerido,
+  mao_obra:
+    maoDeObra,
+  tempo_producao:
+    product?.tempo_producao ||
+    0,
+
+  embalagem:
+    product?.embalagem || 0,
+
+  custos_extras:
+    product?.custos_extras || 0,
+})
           .eq("id", productId);
 
       if (error) {
@@ -637,32 +780,30 @@ const maoDeObra = useMemo(() => {
         </p>
       </div>
 
-      <section className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <InfoItem
-          label="Score Artesanal"
-          value={`${scoreArtesanal}/100`}
-          highlight
-        />
+<section className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
 
-        <InfoItem
-          label="Nível Produto"
-          value={nivelProduto}
-        />
+  <InfoItem
+    label="Mão de Obra"
+    value={`R$ ${maoDeObra.toFixed(2)}`}
+    highlight
+  />
 
-        <InfoItem
-          label="Multiplicador"
-          value={`${multiplicadorValorizacao.toFixed(
-            2
-          )}x`}
-        />
+  <InfoItem
+    label="Lucro Premium"
+    value={`R$ ${premiumProfit.toFixed(2)}`}
+  />
 
-        <InfoItem
-          label="Margem Lucro"
-          value={`R$ ${margemLucro.toFixed(
-            2
-          )}`}
-        />
-      </section>
+  <InfoItem
+    label="Valorização Total"
+    value={`R$ ${(maoDeObra + premiumProfit).toFixed(2)}`}
+  />
+
+<InfoItem
+  label="Margem Oficial"
+  value={`${officialMargin}%`}
+/>
+
+</section>
 
       <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -710,12 +851,12 @@ const maoDeObra = useMemo(() => {
             value={product.categoria}
           />
 
-          <InfoItem
-            label="Preço Atual"
-            value={`R$ ${Number(
-              product.preco
-            ).toFixed(2)}`}
-          />
+<InfoItem
+  label="Custo Total"
+  value={`R$ ${custoTotalProduto.toFixed(
+    2
+  )}`}
+/>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <strong className="mb-2 block text-sm text-slate-500">
@@ -757,61 +898,176 @@ const maoDeObra = useMemo(() => {
             />
           </div>
 
-          <InfoItem
-            label="Mão de Obra"
-            value={`R$ ${maoDeObra.toFixed(
-              2
-            )}`}
-            highlight
-          />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+  <strong className="mb-2 block text-sm text-slate-500">
+    Embalagem
+  </strong>
+
+  <input
+    type="number"
+value={embalagem}
+onChange={(e) => {
+  const value = Number(
+    e.target.value
+  );
+
+  setEmbalagem(value);
+
+  setProduct((prev) =>
+    prev
+      ? {
+          ...prev,
+          embalagem: value,
+        }
+      : null
+  );
+}}
+    className="
+      w-full
+      rounded-xl
+      border
+      border-slate-300
+      bg-white
+      p-3
+      outline-none
+      transition
+      focus:border-green-500
+    "
+  />
+</div>
+
+<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+  <strong className="mb-2 block text-sm text-slate-500">
+    Custos Extras
+  </strong>
+
+  <input
+    type="number"
+value={custosExtras}
+onChange={(e) => {
+  const value = Number(
+    e.target.value
+  );
+
+  setCustosExtras(value);
+
+  setProduct((prev) =>
+    prev
+      ? {
+          ...prev,
+          custos_extras: value,
+        }
+      : null
+  );
+}}
+    className="
+      w-full
+      rounded-xl
+      border
+      border-slate-300
+      bg-white
+      p-3
+      outline-none
+      transition
+      focus:border-green-500
+    "
+  />
+</div>
+
+<SelectField
+  label="Complexidade"
+  value={complexidade}
+  onChange={
+    setComplexidade
+  }
+  options={[
+    "1 - Simples",
+    "2 - Básico",
+    "3 - Avançado",
+    "4 - Complexo",
+  ]}
+/>
 
           <SelectField
-            label="Complexidade"
-            value={complexidade}
-            onChange={
-              setComplexidade
-            }
-            options={[
-              "1 - Simples",
-              "2 - Básico",
-              "3 - Intermediário",
-              "4 - Avançado",
-              "5 - Extremamente complexo",
-            ]}
-          />
-
-          <SelectField
-            label="Exclusividade"
-            value={exclusividade}
-            onChange={
-              setExclusividade
-            }
-            options={[
-              "1 - Muito comum",
-              "2 - Pouco diferente",
-              "3 - Diferenciado",
-              "4 - Exclusivo",
-              "5 - Peça única",
-            ]}
-          />
-
-          <SelectField
-            label="Nível Técnico"
+            label="Conhecimento"
             value={nivelTecnico}
             onChange={
               setNivelTecnico
             }
-            options={[
-              "1 - Iniciante",
-              "2 - Básico",
-              "3 - Intermediário",
-              "4 - Avançado",
-              "5 - Especialista",
-            ]}
+options={[
+  "1 - Iniciante",
+  "2 - Desenvolvimento",
+  "3 - Atuante",
+  "4 - Especialista",
+]}
           />
         </div>
-      </section>
 
+              <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="mb-6 text-2xl font-bold text-slate-900">
+    Precificação Oficial
+  </h2>
+
+  <div className="grid gap-4 md:grid-cols-3">
+
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6">
+      <p className="text-sm text-amber-700">
+        Preço Mínimo
+      </p>
+
+      <h3 className="mt-2 text-3xl font-bold text-amber-900">
+        R$ {minimumPrice.toFixed(2)}
+      </h3>
+
+      <p className="mt-3 text-sm text-green-700">
+        Lucro: R$ {minimumProfit.toFixed(2)}
+      </p>
+
+      <p className="text-sm text-slate-600">
+        Margem: {minimumMargin.toFixed(1)}%
+      </p>
+    </div>
+
+    <div className="rounded-2xl border border-blue-300 bg-blue-50 p-6">
+      <p className="text-sm text-blue-700">
+        Preço Recomendado
+      </p>
+
+      <h3 className="mt-2 text-3xl font-bold text-blue-900">
+        R$ {recommendedPrice.toFixed(2)}
+      </h3>
+
+      <p className="mt-3 text-sm text-green-700">
+        Lucro: R$ {recommendedProfit.toFixed(2)}
+      </p>
+
+      <p className="text-sm text-slate-600">
+        Margem: {recommendedMargin.toFixed(1)}%
+      </p>
+    </div>
+
+    <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-6">
+      <p className="text-sm text-emerald-700">
+        ⭐ Preço Premium
+      </p>
+
+      <h3 className="mt-2 text-3xl font-bold text-emerald-900">
+        R$ {premiumPrice.toFixed(2)}
+      </h3>
+
+      <p className="mt-3 text-sm text-green-700">
+        Lucro: R$ {premiumProfit.toFixed(2)}
+      </p>
+
+      <p className="text-sm text-slate-600">
+        Margem: {premiumMargin.toFixed(1)}%
+      </p>
+    </div>
+
+  </div>
+</section>
+      </section>
+      
       <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -928,34 +1184,6 @@ const maoDeObra = useMemo(() => {
           </div>
         )}
       </section>
-
-      <ProductPricingCard
-        custoTotalProduto={
-          custoTotalProduto
-        }
-        maoDeObra={maoDeObra}
-        multiplicadorValorizacao={
-          multiplicadorValorizacao
-        }
-        precoSugerido={
-          precoSugerido
-        }
-      />
-
-      <FinancialMetricsCard
-        custoTotalProduto={
-          custoTotalProduto
-        }
-        maoDeObra={maoDeObra}
-        precoSugerido={
-          precoSugerido
-        }
-        margemLucro={margemLucro}
-      />
-
-      <FinancialEvolutionChart
-        data={evolutionData}
-      />
 
       {openModal && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 p-4">

@@ -1,1213 +1,551 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
-import {
-  getPricingSettings,
-} from "@/services/pricingSettings.service";
-
-type Product = {
-  id: number;
-  nome: string;
-};
-
-type ProductMaterial = {
-  id: number;
-  product_id: number;
-  material_id: number;
-  quantidade: number;
-  custo_total: number;
-};
-
-type PricingHistory = {
-  id: string;
-  product_id: number;
-
-  custo_materiais: number;
-  custo_mao_obra: number;
-
-  custo_embalagem: number;
-  custos_extras: number;
-
-  margem_lucro: number;
-
-  preco_minimo: number;
-  preco_ideal: number;
-  preco_premium: number;
-
-  tempo_producao: number;
-
-  products: {
-    nome: string;
-  };
-};
+import { getKnowledgeSettings } from "@/services/knowledgeSettings.service";
+import { getProfitLevels } from "@/services/profitLevels.service";
+import { getBusinessMetrics } from "@/services/businessMetrics";
 
 export default function CalculadoraPage() {
   const supabase = createClient();
-  /* =========================
-     STATES
-  ========================== */
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
+  const [
+  selectedComplexity,
+  setSelectedComplexity,
+] = useState(0);
 
-  const [materials, setMaterials] =
-    useState<ProductMaterial[]>([]);
-
-  const [pricingHistory, setPricingHistory] =
-    useState<PricingHistory[]>([]);
-
-  const [selectedProduct, setSelectedProduct] =
-    useState("");
-
-  const [editingId, setEditingId] =
-    useState<string | null>(null);
+const [
+  selectedKnowledge,
+  setSelectedKnowledge,
+] = useState(0);
 
   const [loading, setLoading] =
-    useState(false);
+    useState(true);
+
+  const [knowledgeSettings, setKnowledgeSettings] =
+    useState<any[]>([]);
+
+  const [profitLevels, setProfitLevels] =
+    useState<any[]>([]);
 
   const [businessMetrics, setBusinessMetrics] =
     useState<any>(null);
 
-    const [
-  pricingSettings,
-  setPricingSettings,
-] = useState<any>(null);
-
-  /* =========================
-     FORM
-  ========================== */
-
-  const [finalPrice, setFinalPrice] =
-    useState(350);
-
-  const [packagingCost, setPackagingCost] =
-    useState(15);
-
-  const [extraCost, setExtraCost] =
-    useState(10);
+  const [products, setProducts] =
+    useState<any[]>([]);
 
   const [
-    productionHours,
-    setProductionHours,
-  ] = useState(3);
+    selectedProductId,
+    setSelectedProductId,
+  ] = useState("");
 
-/* =========================
-   LOAD
-========================== */
+  const [materialsCost, setMaterialsCost] =
+    useState(0);
 
-useEffect(() => {
-  loadProducts();
+const [packagingCost, setPackagingCost] =
+  useState(0);
 
-  loadPricingHistory();
+const [extraCost, setExtraCost] =
+  useState(0);
 
-  loadBusinessMetrics();
+const [productionHours, setProductionHours] =
+  useState(0);
 
-  loadPricingSettings();
-}, []);
 
-async function loadBusinessMetrics() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    carregarDados();
+  }, []);
 
-  if (!user) {
-    return;
-  }
-
-  const { data, error } =
-    await supabase
-      .from("business_metrics")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-  if (error) {
-    console.error(error);
-
-    return;
-  }
-
-  setBusinessMetrics(data);
-}
-
-async function loadPricingSettings() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return;
-  }
-
-  const data =
-    await getPricingSettings(
-      user.id
-    );
-
-  setPricingSettings(data);
-}
-
-async function loadProducts() {
-  const { data, error } =
-    await supabase
-      .from("products")
-      .select("id, nome")
-      .order("nome");
-
-  if (error) {
-    console.error(error);
-
-    return;
-  }
-
-  setProducts(data || []);
-}
-
-async function loadPricingHistory() {
-  const { data, error } =
-    await supabase
-      .from("product_pricing")
-      .select(`
-        *,
-        products(nome)
-      `)
-      .order("created_at", {
-        ascending: false,
-      });
-
-  if (error) {
-    console.error(error);
-
-    return;
-  }
-
-  setPricingHistory(
-    (data as PricingHistory[]) || []
-  );
-}
-
-  /* =========================
-     PRODUCT
-  ========================== */
-
-  async function handleSelectProduct(
-    productId: string
-  ) {
-    setSelectedProduct(productId);
-
-    const { data, error } =
-      await supabase
-        .from("product_materials")
-        .select("*")
-        .eq(
-          "product_id",
-          Number(productId)
-        );
-
-    if (error) {
-      console.error(error);
-
-      return;
+  useEffect(() => {
+    if (selectedProductId) {
+      carregarProduto();
     }
+  }, [selectedProductId]);
 
-    setMaterials(data || []);
-  }
-
-  /* =========================
-     RESET
-  ========================== */
-
-  function resetForm() {
-    setEditingId(null);
-
-    setSelectedProduct("");
-
-    setMaterials([]);
-
-    setFinalPrice(350);
-
-    setPackagingCost(15);
-
-    setExtraCost(10);
-
-    setProductionHours(3);
-  }
-
-  /* =========================
-     CALCULOS
-  ========================== */
-
-  const materialsCost = useMemo(() => {
-    return materials.reduce(
-      (total, item) =>
-        total +
-        Number(item.custo_total),
-      0
-    );
-  }, [materials]);
-
-  /* =========================
-   CONFIG IA
-========================== */
-
-const demandWeight =
-  Number(
-    pricingSettings?.demand_weight ||
-      0.08
-  );
-
-const brandWeight =
-  Number(
-    pricingSettings?.brand_weight ||
-      0.12
-  );
-
-const socialWeight =
-  Number(
-    pricingSettings?.social_weight ||
-      0.03
-  );
-
-const premiumMultiplier =
-  Number(
-    pricingSettings?.premium_multiplier ||
-      1.25
-  );
-
-const aiMultiplier =
-  Number(
-    pricingSettings?.ai_multiplier ||
-      1.15
-  );
-
-const laborWeight =
-  Number(
-    pricingSettings?.labor_weight ||
-      1
-  );
-
-const materialWeight =
-  Number(
-    pricingSettings?.material_weight ||
-      1
-  );
-
-const exclusivityWeight =
-  Number(
-    pricingSettings?.exclusivity_weight ||
-      1
-  );
-
-const urgencyWeight =
-  Number(
-    pricingSettings?.urgency_weight ||
-      1
-  );
-
-/* =========================
-   CUSTOS
-========================== */
-
-const adjustedMaterialCost =
-  materialsCost *
-  materialWeight;
-
-const laborCost =
-  productionHours *
-  Number(
-    businessMetrics?.valor_hora || 0
-  ) *
-  laborWeight;
-
-const adjustedLaborCost =
-  laborCost;
-
-/* =========================
-   PREÇOS BASE
-========================== */
-
-const minimumPrice =
-  adjustedMaterialCost +
-  adjustedLaborCost +
-  Number(packagingCost) +
-  Number(extraCost);
-
-const idealPrice =
-  Number(finalPrice);
-
-const premiumPrice =
-  idealPrice *
-  premiumMultiplier;
-
-/* =========================
-   MARGEM
-========================== */
-
-const calculatedMargin =
-  minimumPrice > 0
-    ? (
-        ((idealPrice -
-          minimumPrice) /
-          minimumPrice) *
-        100
-      ).toFixed(2)
-    : "0";
-
-/* =========================
-   BOOSTS IA
-========================== */
-
-const demandBoost =
-  Number(
-    businessMetrics?.nivel_demanda ||
-      1
-  ) * demandWeight;
-
-const brandBoost =
-  Number(
-    businessMetrics?.nivel_marca ||
-      1
-  ) * brandWeight;
-
-const socialBoost =
-  Number(
-    businessMetrics?.score_artesanal ||
-      0
-  ) * socialWeight;
-
-const strategicBoost =
-  demandBoost +
-  brandBoost +
-  socialBoost;
-
-/* =========================
-   IA ESTRATÉGICA
-========================== */
-
-const strategicPrice =
-  premiumPrice +
-  strategicBoost;
-
-const intelligentPrice =
-  strategicPrice *
-  aiMultiplier *
-  exclusivityWeight *
-  urgencyWeight;
-
-
-  /* =========================
-     SAVE
-  ========================== */
-
-  async function handleSavePricing() {
+  async function carregarDados() {
     try {
       setLoading(true);
-
-      if (!selectedProduct) {
-        alert(
-          "Selecione um produto."
-        );
-
-        return;
-      }
 
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        alert(
-          "Usuário não autenticado."
-        );
+      if (!user) return;
 
-        return;
-      }
+      const [
+        knowledge,
+        profit,
+        metrics,
+        productsResponse,
+      ] = await Promise.all([
+        getKnowledgeSettings(),
+        getProfitLevels(),
+        getBusinessMetrics(user.id),
 
-      let error = null;
+        supabase
+          .from("products")
+          .select(
+            "id,nome,tempo_producao"
+          )
+          .order("nome"),
+      ]);
 
-      if (editingId) {
-        const response =
-          await supabase
-            .from("product_pricing")
-            .update({
-              product_id: Number(
-                selectedProduct
-              ),
-
-              custo_materiais:
-                materialsCost,
-
-              custo_mao_obra:
-                laborCost,
-
-              custo_embalagem:
-                packagingCost,
-
-              custos_extras:
-                extraCost,
-
-              tempo_producao:
-                productionHours,
-
-              margem_lucro:
-                Number(
-                  calculatedMargin
-                ),
-
-              preco_minimo:
-                minimumPrice,
-
-              preco_ideal:
-                idealPrice,
-
-              preco_premium:
-                premiumPrice,
-            })
-            .eq("id", editingId);
-
-        error = response.error;
-      } else {
-        const response =
-          await supabase
-            .from("product_pricing")
-            .insert({
-              user_id: user.id,
-
-              product_id: Number(
-                selectedProduct
-              ),
-
-              custo_materiais:
-                materialsCost,
-
-              custo_mao_obra:
-                laborCost,
-
-              custo_embalagem:
-                packagingCost,
-
-              custos_extras:
-                extraCost,
-
-              tempo_producao:
-                productionHours,
-
-              margem_lucro:
-                Number(
-                  calculatedMargin
-                ),
-
-              preco_minimo:
-                minimumPrice,
-
-              preco_ideal:
-                idealPrice,
-
-              preco_premium:
-                premiumPrice,
-            });
-
-        error = response.error;
-      }
-
-      if (error) {
-        console.error(error);
-
-        alert(
-          "Erro ao salvar precificação."
-        );
-
-        return;
-      }
-
-      alert(
-        editingId
-          ? "Precificação atualizada!"
-          : "Precificação salva!"
+      setKnowledgeSettings(
+        knowledge || []
       );
 
-      resetForm();
+      setProfitLevels(
+        profit || []
+      );
 
-      loadPricingHistory();
+      setBusinessMetrics(metrics);
+
+      setProducts(
+        productsResponse.data || []
+      );
     } catch (error) {
-      console.error(error);
-
-      alert(
-        "Erro inesperado."
-      );
+      console.log(error);
     } finally {
       setLoading(false);
     }
   }
 
-  /* =========================
-     DELETE
-  ========================== */
+  async function carregarProduto() {
+    try {
+      const { data: product } =
+        await supabase
+          .from("products")
+          .select("*")
+          .eq(
+            "id",
+            Number(selectedProductId)
+          )
+          .single();
 
-  async function handleDeletePricing(
-    id: string
-  ) {
-    const confirmDelete =
-      confirm(
-        "Deseja excluir esta precificação?"
+if (product) {
+  setProductionHours(
+    Number(
+      product.tempo_producao || 0
+    )
+  );
+
+  setPackagingCost(
+    Number(
+      product.embalagem || 0
+    )
+  );
+
+  setExtraCost(
+    Number(
+      product.custos_extras || 0
+    )
+  );
+}
+
+      setSelectedComplexity(
+  Number(
+    product.complexidade || 1
+  )
+);
+
+setSelectedKnowledge(
+  Number(
+    product.nivel_tecnico || 1
+  )
+);
+
+console.log(
+  "COMPLEXIDADE",
+  product.complexidade
+);
+
+console.log(
+  "NIVEL_TECNICO",
+  product.nivel_tecnico
+);
+
+      const { data: materials } =
+        await supabase
+          .from("product_materials")
+          .select("custo_total")
+          .eq(
+            "product_id",
+            Number(selectedProductId)
+          );
+
+      const totalMaterials =
+        (materials || []).reduce(
+          (acc, item) =>
+            acc +
+            Number(
+              item.custo_total || 0
+            ),
+          0
+        );
+
+        setMaterialsCost(
+        totalMaterials
       );
-
-    if (!confirmDelete) {
-      return;
+    } catch (error) {
+      console.log(error);
     }
-
-    const { error } = await supabase
-      .from("product_pricing")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-
-      alert(
-        "Erro ao excluir."
-      );
-
-      return;
-    }
-
-    alert(
-      "Precificação excluída."
-    );
-
-    loadPricingHistory();
   }
 
   /* =========================
-     EDIT
+     CUSTOS
   ========================== */
 
-  async function handleEditPricing(
-    item: PricingHistory
-  ) {
-    setEditingId(item.id);
-
-    setSelectedProduct(
-      String(item.product_id)
+  const laborCost =
+    productionHours *
+    Number(
+      businessMetrics?.valor_hora || 0
     );
 
-    setFinalPrice(
-      Number(item.preco_ideal)
-    );
+const totalCost =
+  materialsCost +
+  laborCost +
+  packagingCost +
+  extraCost 
 
-    setPackagingCost(
-      Number(item.custo_embalagem)
-    );
+ /* =========================
+   COMPLEXIDADE
+========================== */
 
-    setExtraCost(
-      Number(item.custos_extras)
-    );
+const complexityScoreMap: Record<
+  number,
+  number
+> = {
+  1: 5,
+  2: 10,
+  3: 15,
+  4: 25,
+};
 
-    setProductionHours(
-      Number(item.tempo_producao || 3)
-    );
+const knowledgeScoreMap: Record<
+  number,
+  number
+> = {
+  1: 5,
+  2: 10,
+  3: 15,
+  4: 20,
+};
 
-    await handleSelectProduct(
-      String(item.product_id)
-    );
+/* =========================
+   DEMANDA
+========================== */
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }
+const demandScoreMap: Record<
+  number,
+  number
+> = {
+   1: 0,
+  2: 5,
+  3: 10,
+  4: 15,
+};
+
+const recognitionScoreMap: Record<
+  number,
+  number
+> = {
+   1: 5,
+  2: 10,
+  3: 20,
+  4: 30,
+};
+
+const complexityScore =
+  complexityScoreMap[
+    selectedComplexity
+  ] || 0;
+
+const knowledgeScore =
+  knowledgeScoreMap[
+    selectedKnowledge
+  ] || 0;
+
+const demandScore =
+  demandScoreMap[
+    Number(
+      businessMetrics?.nivel_demanda
+    )
+  ] || 0;
+
+const recognitionScore =
+  recognitionScoreMap[
+    Number(
+      businessMetrics?.nivel_marca
+    )
+  ] || 0;
+
+const totalScore =
+  complexityScore +
+  knowledgeScore +
+  demandScore +
+  recognitionScore;
+
+  /* =========================
+   MARGEM OFICIAL
+========================== */
+
+const officialMargin =
+  complexityScore +
+  knowledgeScore +
+  demandScore +
+  recognitionScore;
+
+/* =========================
+   PREÇOS OFICIAIS
+========================== */
+
+const premiumPrice =
+  totalCost *
+  (1 + officialMargin / 100);
+
+const principalPrice =
+  totalCost *
+  (1 +
+    officialMargin *
+      0.9 /
+      100);
+
+const minimumPrice =
+  totalCost *
+  (1 +
+    officialMargin *
+      0.8 /
+      100);
+
+const premiumProfit =
+  premiumPrice -
+  totalCost;
+
+const principalProfit =
+  principalPrice -
+  totalCost;
+
+const minimumProfit =
+  minimumPrice -
+  totalCost;
+
+const premiumMargin =
+  premiumPrice > 0
+    ? (premiumProfit /
+        premiumPrice) *
+      100
+    : 0;
+
+const principalMargin =
+  principalPrice > 0
+    ? (principalProfit /
+        principalPrice) *
+      100
+    : 0;
+
+const minimumMargin =
+  minimumPrice > 0
+    ? (minimumProfit /
+        minimumPrice) *
+      100
+    : 0;
+
+    const valorizacaoTotal =
+  laborCost +
+  premiumProfit;
 
   return (
-<div
-  className="
-    min-h-screen
-    space-y-8
-    p-6
-    md:p-10
-  "
->
-      {/* HEADER */}
-      <div>
-        <h1
-          className="
-            text-5xl
-            font-black
-            tracking-tight
-            text-slate-900
-          "
-        >
+    <main className="p-8">
+      <div className="mb-8">
+        <h1 className="text-5xl font-black text-slate-900">
           Calculadora Inteligente
         </h1>
 
-        <p
-          className="
-            mt-2
-            text-lg
-            text-slate-500
-          "
-        >
-          Precificação estratégica
-          artesanal
+        <p className="mt-3 text-xl text-slate-500">
+          Metodologia Oficial Precifica+
         </p>
       </div>
 
-      {/* CARD */}
-      <div
-        className="
-          rounded-3xl
-          border
-          border-slate-200
-          bg-white
-          p-8
-          shadow-sm
-        "
-      >
-        {/* TITLE */}
-        <div className="mb-10">
-          <h2
-            className="
-              text-3xl
-              font-bold
-              text-slate-900
-            "
-          >
-            {editingId
-              ? "Editar Precificação"
-              : "Precificação do Produto"}
-          </h2>
+      <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <h2 className="text-2xl font-bold text-slate-900">
+          Estrutura Oficial
+        </h2>
 
-          <p
-            className="
-              mt-2
-              text-base
-              text-slate-500
-            "
+        <div className="mt-6">
+          <label className="mb-2 block text-sm font-medium text-slate-600">
+            Selecionar Produto
+          </label>
+
+          <select
+            value={selectedProductId}
+            onChange={(e) => {
+
+  setSelectedProductId(
+    e.target.value
+  );
+}}
+            className="w-full rounded-2xl border border-slate-300 p-4"
           >
-            Sistema profissional de
-            precificação artesanal
-          </p>
+            <option value="">
+              Selecione um produto
+            </option>
+
+            {products.map(
+              (product) => (
+                <option
+                  key={product.id}
+                  value={product.id}
+                >
+                  {product.nome}
+                </option>
+              )
+            )}
+          </select>
         </div>
 
-        {/* FORM */}
-        <div
-          className="
-            grid
-            gap-6
-            md:grid-cols-2
-          "
-        >
-          {/* PRODUTO */}
-          <div>
-            <label
-              className="
-                mb-2
-                block
-                text-sm
-                font-semibold
-                text-slate-700
-              "
-            >
-              Produto
-            </label>
+        <div className="mt-8 grid gap-4 md:grid-cols-4">
 
-            <select
-              value={selectedProduct}
-              onChange={(e) =>
-                handleSelectProduct(
-                  e.target.value
-                )
-              }
-              className="
-                h-14
-                w-full
-                rounded-2xl
-                border
-                border-slate-300
-                bg-white
-                px-4
-                text-base
-                outline-none
-              "
-            >
-              <option value="">
-                Selecione um produto
-              </option>
+  <div className="rounded-2xl bg-blue-100 p-6">
+    <p className="text-sm text-blue-700">
+      Mão de Obra
+    </p>
 
-              {products.map(
-                (product) => (
-                  <option
-                    key={product.id}
-                    value={product.id}
-                  >
-                    {product.nome}
-                  </option>
-                )
-              )}
-            </select>
-          </div>
+    <h3 className="mt-2 text-3xl font-bold text-blue-900">
+      R$ {laborCost.toFixed(2)}
+    </h3>
+  </div>
 
-          {/* PREÇO */}
-          <div>
-            <label
-              className="
-                mb-2
-                block
-                text-sm
-                font-semibold
-                text-slate-700
-              "
-            >
-              Preço Final Desejado
-            </label>
+  <div className="rounded-2xl bg-green-100 p-6">
+    <p className="text-sm text-green-700">
+      Lucro Premium
+    </p>
 
-            <input
-              type="number"
-              value={finalPrice}
-              onChange={(e) =>
-                setFinalPrice(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-              className="
-                h-14
-                w-full
-                rounded-2xl
-                border
-                border-slate-300
-                bg-white
-                px-4
-                text-base
-                outline-none
-              "
-            />
-          </div>
+    <h3 className="mt-2 text-3xl font-bold text-green-900">
+      R$ {premiumProfit.toFixed(2)}
+    </h3>
+  </div>
 
-          {/* EMBALAGEM */}
-          <div>
-            <label
-              className="
-                mb-2
-                block
-                text-sm
-                font-semibold
-                text-slate-700
-              "
-            >
-              Custo Embalagem
-            </label>
+  <div className="rounded-2xl bg-violet-100 p-6">
+    <p className="text-sm text-violet-700">
+      Valorização Total
+    </p>
 
-            <input
-              type="number"
-              value={packagingCost}
-              onChange={(e) =>
-                setPackagingCost(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-              className="
-                h-14
-                w-full
-                rounded-2xl
-                border
-                border-slate-300
-                bg-white
-                px-4
-                text-base
-                outline-none
-              "
-            />
-          </div>
+    <h3 className="mt-2 text-3xl font-bold text-violet-900">
+      R$ {valorizacaoTotal.toFixed(2)}
+    </h3>
+  </div>
 
-          {/* EXTRAS */}
-          <div>
-            <label
-              className="
-                mb-2
-                block
-                text-sm
-                font-semibold
-                text-slate-700
-              "
-            >
-              Custos Extras
-            </label>
+  <div className="rounded-2xl bg-indigo-100 p-6">
+    <p className="text-sm text-indigo-700">
+      Margem Oficial
+    </p>
 
-            <input
-              type="number"
-              value={extraCost}
-              onChange={(e) =>
-                setExtraCost(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-              className="
-                h-14
-                w-full
-                rounded-2xl
-                border
-                border-slate-300
-                bg-white
-                px-4
-                text-base
-                outline-none
-              "
-            />
-          </div>
+    <h3 className="mt-2 text-3xl font-bold text-indigo-900">
+      {officialMargin}%
+    </h3>
+  </div>
 
-          {/* TEMPO */}
-          <div>
-            <label
-              className="
-                mb-2
-                block
-                text-sm
-                font-semibold
-                text-slate-700
-              "
-            >
-              Tempo Produção (horas)
-            </label>
+</div>
 
-            <input
-              type="number"
-              value={productionHours}
-              onChange={(e) =>
-                setProductionHours(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-              className="
-                h-14
-                w-full
-                rounded-2xl
-                border
-                border-slate-300
-                bg-white
-                px-4
-                text-base
-                outline-none
-              "
-            />
-          </div>
-        </div>
-
-        {/* RESULTADOS */}
-        <div
-          className="
-            mt-10
-            grid
-            gap-5
-            md:grid-cols-5
-          "
-        >
-          {/* MATERIAL */}
-          <div className="rounded-3xl bg-slate-100 p-6">
+        <div className="mt-8 grid gap-4 md:grid-cols-5">
+          <div className="rounded-2xl bg-slate-100 p-4">
             <p className="text-sm text-slate-500">
               Materiais
             </p>
 
-            <strong className="mt-3 block text-4xl font-black text-slate-900">
-              R$
-              {" "}
-              {materialsCost.toFixed(2)}
+            <strong className="text-3xl">
+              R$ {materialsCost.toFixed(2)}
             </strong>
           </div>
 
-          {/* MAO OBRA */}
-          <div className="rounded-3xl bg-sky-100 p-6">
-            <p className="text-sm text-sky-700">
-              Mão de Obra
-            </p>
-
-            <strong className="mt-3 block text-4xl font-black text-sky-800">
-              R$
-              {" "}
-              {laborCost.toFixed(2)}
-            </strong>
-          </div>
-
-          {/* MINIMO */}
-          <div className="rounded-3xl bg-slate-100 p-6">
+          <div className="rounded-2xl bg-slate-100 p-4">
             <p className="text-sm text-slate-500">
-              Preço Mínimo
+              Embalagem
             </p>
 
-            <strong className="mt-3 block text-4xl font-black text-slate-900">
-              R$
-              {" "}
-              {minimumPrice.toFixed(2)}
+            <strong className="text-3xl">
+              R$ {packagingCost.toFixed(2)}
             </strong>
           </div>
 
-          {/* IDEAL */}
-          <div className="rounded-3xl bg-emerald-100 p-6">
-            <p className="text-sm text-emerald-700">
-              Preço definido
+          <div className="rounded-2xl bg-slate-100 p-4">
+            <p className="text-sm text-slate-500">
+              Extras
             </p>
 
-            <strong className="mt-3 block text-4xl font-black text-emerald-800">
-              R$
-              {" "}
-              {idealPrice.toFixed(2)}
+            <strong className="text-3xl">
+              R$ {extraCost.toFixed(2)}
             </strong>
           </div>
+<div className="rounded-2xl bg-emerald-100 p-4">
+  <p className="text-sm text-emerald-700">
+    Custo Total
+  </p>
 
-          {/* PREMIUM */}
-          <div className="rounded-3xl bg-amber-100 p-6">
-            <p className="text-sm text-amber-700">
-              Premium
-            </p>
-
-            <strong className="mt-3 block text-4xl font-black text-amber-800">
-              R$
-              {" "}
-              {premiumPrice.toFixed(2)}
-            </strong>
-          </div>
+  <strong className="text-3xl text-emerald-900">
+    R$ {totalCost.toFixed(2)}
+  </strong>
+</div>
         </div>
 
-        {/* IA */}
-        <div
-          className="
-            mt-5
-            rounded-3xl
-            bg-violet-100
-            p-6
-          "
-        >
-          <p className="text-sm text-violet-700">
-            Preço Estratégico IA
-          </p>
+  <div className="grid gap-4 md:grid-cols-3">
 
-          <strong className="mt-3 block text-4xl font-black text-violet-800">
-            R$
-            {" "}
-{intelligentPrice.toFixed(2)}
-          </strong>
+    <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6">
+      <p className="text-sm font-semibold text-amber-700">
+        Preço Mínimo
+      </p>
 
-          <p className="mt-2 text-sm text-violet-700">
-            Margem:
-            {" "}
-            {calculatedMargin}%
-          </p>
-        </div>
+      <h3 className="mt-2 text-4xl font-black">
+        R$ {minimumPrice.toFixed(2)}
+      </h3>
 
-        {/* ACTIONS */}
-        <div
-          className="
-            mt-10
-            flex
-            justify-end
-            gap-4
-          "
-        >
-          {editingId && (
-            <button
-              onClick={resetForm}
-              className="
-                rounded-2xl
-                border
-                border-slate-300
-                bg-white
-                px-8
-                py-4
-                text-base
-                font-bold
-                text-slate-700
-              "
-            >
-              Cancelar
-            </button>
-          )}
-
-          <button
-            onClick={
-              handleSavePricing
-            }
-            disabled={loading}
-            className="
-              rounded-2xl
-              bg-slate-950
-              px-8
-              py-4
-              text-base
-              font-bold
-              text-white
-              transition-all
-
-              hover:opacity-90
-
-              disabled:cursor-not-allowed
-              disabled:opacity-50
-            "
-          >
-            {loading
-              ? "Salvando..."
-              : editingId
-              ? "Atualizar Precificação"
-              : "Salvar Precificação"}
-          </button>
-        </div>
-      </div>
-
-      {/* HISTORICO */}
-      <div
-        className="
-          rounded-3xl
-          border
-          border-slate-200
-          bg-white
-          p-8
-          shadow-sm
-        "
-      >
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-900">
-            Histórico
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Últimas precificações
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          {pricingHistory.length ===
-            0 && (
-            <div
-              className="
-                rounded-2xl
-                border
-                border-dashed
-                border-slate-300
-                p-8
-                text-center
-              "
-            >
-              <p className="text-slate-500">
-                Nenhuma precificação
-                salva.
+      <p className="mt-3 text-green-700 font-medium">
+        Lucro: R$ {minimumProfit.toFixed(2)}
               </p>
-            </div>
-          )}
-
-          {pricingHistory.map((item) => (
-            <div
-              key={item.id}
-              className="
-                flex
-                flex-col
-                gap-4
-                rounded-2xl
-                border
-                border-slate-200
-                p-5
-
-                md:flex-row
-                md:items-center
-                md:justify-between
-              "
-            >
-              {/* LEFT */}
-              <div>
-                <p className="text-lg font-bold text-slate-900">
-                  {item.products?.nome}
-                </p>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Lucro:
-                  {" "}
-                  {Number(
-                    item.margem_lucro
-                  ).toFixed(0)}
-                  %
-                </p>
-              </div>
-
-              {/* RIGHT */}
-              <div
-                className="
-                  flex
-                  flex-wrap
-                  items-center
-                  gap-3
-                "
-              >
-                <div className="text-right">
-                  <p className="text-sm text-slate-500">
-                    Preço definido
-                  </p>
-
-                  <strong className="text-2xl font-black text-emerald-700">
-                    R$
-                    {" "}
-                    {Number(
-                      item.preco_ideal
-                    ).toFixed(2)}
-                  </strong>
-                </div>
-
-                <button
-                  onClick={() =>
-                    handleEditPricing(
-                      item
-                    )
-                  }
-                  className="
-                    rounded-xl
-                    bg-blue-500
-                    px-4
-                    py-2
-                    text-sm
-                    font-bold
-                    text-white
-
-                    hover:bg-blue-600
-                  "
-                >
-                  Editar
-                </button>
-
-                <button
-                  onClick={() =>
-                    handleDeletePricing(
-                      item.id
-                    )
-                  }
-                  className="
-                    rounded-xl
-                    bg-red-500
-                    px-4
-                    py-2
-                    text-sm
-                    font-bold
-                    text-white
-
-                    hover:bg-red-600
-                  "
-                >
-                  Excluir
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+              <p className="text-sm text-slate-500">
+  Margem: {minimumMargin.toFixed(1)}%
+</p>
     </div>
+
+    <div className="rounded-3xl border border-slate-300 bg-white p-6">
+      <p className="text-sm font-semibold text-slate-600">
+        Preço Recomendado
+      </p>
+
+      <h3 className="mt-2 text-4xl font-black">
+        R$ {principalPrice.toFixed(2)}
+      </h3>
+
+      <p className="mt-3 text-green-700 font-medium">
+        Lucro: R$ {principalProfit.toFixed(2)}
+      </p>
+      <p className="text-sm text-slate-500">
+  Margem: {principalMargin.toFixed(1)}%
+</p>
+    </div>
+
+    <div className="rounded-3xl border border-green-300 bg-green-50 p-6">
+      <p className="text-sm font-semibold text-green-700">
+        ⭐ Preço Premium
+      </p>
+
+      <h3 className="mt-2 text-4xl font-black text-green-800">
+        R$ {premiumPrice.toFixed(2)}
+      </h3>
+
+      <p className="mt-3 text-green-800 font-medium">
+        Lucro: R$ {premiumProfit.toFixed(2)}
+      </p>
+      <p className="text-sm text-green-700">
+  Margem: {premiumMargin.toFixed(1)}%
+</p>
+    </div>
+
+  </div>
+        
+              </div>
+    </main>
   );
 }
