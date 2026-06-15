@@ -251,7 +251,7 @@ const recognitionScoreMap: Record<
   number,
   number
 > = {
-   1: 5,
+   1: 0,
   2: 10,
   3: 20,
   4: 30,
@@ -309,14 +309,14 @@ const principalPrice =
   totalCost *
   (1 +
     officialMargin *
-      0.9 /
+      0.8 /
       100);
 
 const minimumPrice =
   totalCost *
   (1 +
     officialMargin *
-      0.8 /
+      0.6 /
       100);
 
 const premiumProfit =

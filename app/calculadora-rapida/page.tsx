@@ -193,14 +193,14 @@ const recommendedPrice =
   custoTotal *
   (1 +
     officialMargin *
-      0.9 /
+      0.8 /
       100);
 
 const minimumPrice =
   custoTotal *
   (1 +
     officialMargin *
-      0.8 /
+      0.6 /
       100);
 
 const premiumProfit =
