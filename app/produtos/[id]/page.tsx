@@ -37,6 +37,12 @@ type Material = {
   id: number;
   nome: string;
   preco: number;
+
+  unidade: string;
+
+  quantidade_comprada: number;
+
+  estoque_atual: number;
 };
 
 type ProductMaterial = {
@@ -287,11 +293,14 @@ setCustosExtras(
         .select(
           `
           *,
-          materials (
-            id,
-            nome,
-            preco
-          )
+materials (
+  id,
+  nome,
+  preco,
+  unidade,
+  quantidade_comprada,
+  estoque_atual
+)
         `
         )
         .eq("product_id", productId);
@@ -690,21 +699,37 @@ const score =
         return;
       }
 
-      const custoTotal =
-        material.preco * quantidade;
+const custoUnitario =
+  Number(material.preco) /
+  Number(
+    material.quantidade_comprada
+  );
+
+const custoTotal =
+  custoUnitario *
+  quantidade;
 
       const { error } =
         await supabase
           .from("product_materials")
-          .insert({
-            product_id:
-              Number(productId),
-            material_id:
-              material.id,
-            quantidade,
-            custo_total:
-              custoTotal,
-          });
+.insert({
+  product_id:
+    Number(productId),
+
+  material_id:
+    material.id,
+
+  quantidade,
+
+  unidade:
+    material.unidade,
+
+  custo_unitario:
+    custoUnitario,
+
+  custo_total:
+    custoTotal,
+})
 
       if (error) {
         console.log(error);

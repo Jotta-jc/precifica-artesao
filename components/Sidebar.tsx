@@ -15,11 +15,32 @@ import {
 import { createClient } from "@/lib/supabase/client";
 
 const menuItems = [
+
   {
     label: "Dashboard",
     href: "/dashboard",
     icon: "📊",
   },
+      {
+    label: "Empresa",
+    href: "/empresa",
+    icon: "🏢",
+  },
+    {
+    label: "Clientes",
+    href: "/clientes",
+    icon: "👥",
+  },
+  {
+  label: "Pedidos",
+  href: "/pedidos",
+  icon: "📋",
+},
+    {
+  label: "Calculadora Rápida",
+  href: "/calculadora-rapida",
+  icon: "⚡",
+},
   {
     label: "Produtos",
     href: "/produtos",
@@ -30,23 +51,13 @@ const menuItems = [
     href: "/materiais",
     icon: "🧵",
   },
-  {
-    label: "Clientes",
-    href: "/clientes",
-    icon: "👥",
-  },
-  {
-    label: "Empresa",
-    href: "/empresa",
-    icon: "🏢",
-  },
-  {
-  label: "Calculadora Rápida",
-  href: "/calculadora-rapida",
-  icon: "⚡",
+{
+  label: "Estoque",
+  href: "/estoque",
+  icon: "📦",
 },
   {
-    label: "Calculadora",
+    label: "Calculadora Inteligente",
     href: "/calculadora",
     icon: "🧮",
   },

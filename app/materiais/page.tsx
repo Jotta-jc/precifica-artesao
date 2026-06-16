@@ -13,6 +13,11 @@ export default function MateriaisPage() {
   const [preco, setPreco] = useState("");
   const [estoque, setEstoque] = useState("");
 
+  const [
+  quantidadeComprada,
+  setQuantidadeComprada,
+] = useState("");
+
   const [openModal, setOpenModal] =
     useState(false);
 
@@ -72,13 +77,27 @@ export default function MateriaisPage() {
     if (editingMaterialId) {
       const { error } = await supabase
         .from("materials")
-        .update({
-          nome,
-          categoria,
-          unidade,
-          preco: Number(preco),
-          estoque: Number(estoque),
-        })
+.update({
+  nome,
+  categoria,
+  unidade,
+
+  quantidade_comprada:
+    Number(
+      quantidadeComprada
+    ),
+
+  preco: Number(preco),
+
+  estoque: Number(
+  quantidadeComprada
+),
+
+  estoque_atual:
+    Number(
+      quantidadeComprada
+    ),
+})
         .eq("id", editingMaterialId);
 
       if (error) {
@@ -96,16 +115,31 @@ export default function MateriaisPage() {
     else {
       const { error } = await supabase
         .from("materials")
-        .insert([
-          {
-            user_id: session.user.id,
-            nome,
-            categoria,
-            unidade,
-            preco: Number(preco),
-            estoque: Number(estoque),
-          },
-        ]);
+.insert([
+  {
+    user_id: session.user.id,
+
+    nome,
+    categoria,
+    unidade,
+
+    quantidade_comprada:
+      Number(
+        quantidadeComprada
+      ),
+
+    preco: Number(preco),
+
+    estoque: Number(
+  quantidadeComprada
+),
+
+    estoque_atual:
+      Number(
+        quantidadeComprada
+      ),
+  },
+])
 
       if (error) {
         console.log(error);
@@ -295,6 +329,17 @@ export default function MateriaisPage() {
               </th>
 
               <th
+  style={{
+    textAlign: "left",
+    padding: "16px",
+    color: "#64748b",
+    fontSize: "18px",
+  }}
+>
+  Custo Unitário
+</th>
+
+              <th
                 style={{
                   textAlign: "left",
                   padding: "16px",
@@ -302,7 +347,7 @@ export default function MateriaisPage() {
                   fontSize: "18px",
                 }}
               >
-                Estoque
+                Estoque Atual
               </th>
 
               <th
@@ -377,12 +422,27 @@ export default function MateriaisPage() {
                 </td>
 
                 <td
+  style={{
+    padding: "20px 16px",
+    fontSize: "18px",
+  }}
+>
+  R${" "}
+  {(
+    Number(material.preco || 0) /
+    Number(
+      material.quantidade_comprada || 1
+    )
+  ).toFixed(4)}
+</td>
+
+                <td
                   style={{
                     padding: "20px 16px",
                     fontSize: "18px",
                   }}
                 >
-                  {material.estoque}
+                  {material.estoque_atual}
                 </td>
 
                 <td
@@ -419,6 +479,12 @@ export default function MateriaisPage() {
                             material.preco
                           )
                         );
+
+                        setQuantidadeComprada(
+  String(
+    material.quantidade_comprada || 0
+  )
+);
 
                         setEstoque(
                           String(
@@ -543,25 +609,57 @@ export default function MateriaisPage() {
               }}
             />
 
-            <input
-              placeholder="Unidade"
-              value={unidade}
-              onChange={(e) =>
-                setUnidade(
-                  e.target.value
-                )
-              }
-              style={{
-                width: "100%",
-                padding: "16px",
-                marginBottom: "16px",
-                borderRadius: "14px",
-                border:
-                  "1px solid #cbd5e1",
-                fontSize: "18px",
-              }}
-            />
+<select
+  value={unidade}
+  onChange={(e) =>
+    setUnidade(
+      e.target.value
+    )
+  }
+  style={{
+    width: "100%",
+    padding: "16px",
+    marginBottom: "16px",
+    borderRadius: "14px",
+    border: "1px solid #cbd5e1",
+    fontSize: "18px",
+  }}
+>
+  <option value="">
+    Selecione a unidade
+  </option>
 
+  <option value="g">
+    Grama (g)
+  </option>
+
+  <option value="m">
+    Metro (m)
+  </option>
+
+  <option value="un">
+    Unidade (un)
+  </option>
+</select>
+
+<input
+  type="number"
+  placeholder="Quantidade Comprada"
+  value={quantidadeComprada}
+  onChange={(e) =>
+    setQuantidadeComprada(
+      e.target.value
+    )
+  }
+  style={{
+    width: "100%",
+    padding: "16px",
+    marginBottom: "16px",
+    borderRadius: "14px",
+    border: "1px solid #cbd5e1",
+    fontSize: "18px",
+  }}
+/>
             <input
               type="number"
               placeholder="Preço"
@@ -573,26 +671,6 @@ export default function MateriaisPage() {
                 width: "100%",
                 padding: "16px",
                 marginBottom: "16px",
-                borderRadius: "14px",
-                border:
-                  "1px solid #cbd5e1",
-                fontSize: "18px",
-              }}
-            />
-
-            <input
-              type="number"
-              placeholder="Estoque"
-              value={estoque}
-              onChange={(e) =>
-                setEstoque(
-                  e.target.value
-                )
-              }
-              style={{
-                width: "100%",
-                padding: "16px",
-                marginBottom: "24px",
                 borderRadius: "14px",
                 border:
                   "1px solid #cbd5e1",
