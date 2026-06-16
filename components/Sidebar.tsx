@@ -190,25 +190,24 @@ export function Sidebar() {
       )}
 
       {/* SIDEBAR */}
-      <aside
-        className={`
-          fixed
-          top-0
-          left-0
-     
+<aside
+  className={`
+    fixed
+    top-0
+    left-0
 
-          z-50
-          flex
-          h-screen
-          w-[240px]
-          flex-col
-          justify-between
-          bg-slate-950
-          px-4
-          py-5
-          text-white
-          transition-transform
-          duration-300
+    z-50
+    flex
+    h-screen
+    w-[240px]
+    flex-col
+    overflow-y-auto
+    bg-slate-950
+    px-4
+    py-5
+    text-white
+    transition-transform
+    duration-300
 
           -translate-x-full
 
@@ -221,8 +220,8 @@ export function Sidebar() {
           md:translate-x-0
         `}
       >
-        <div>
-          {/* HEADER */}
+ <div className="flex-1">
+  {/* HEADER */}
           <div className="mb-10">
             <div
               className="
