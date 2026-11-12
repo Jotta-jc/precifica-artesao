@@ -1,5 +1,7 @@
 "use client";
 
+import PageHeader from "@/components/ui/PageHeader";
+
 import { useEffect, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -185,11 +187,6 @@ setNomeEmpresa(
         return;
       }
 
-      console.log(
-  "NOME EMPRESA",
-  nomeEmpresa
-);
-
       await updateBusinessMetrics({
         userId: user.id,
         nome_empresa:
@@ -244,15 +241,10 @@ setNomeEmpresa(
 
   return (
     <main className="bg-gray-100 p-4 md:p-8">
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold text-slate-900 md:text-5xl">
-          Empresa
-        </h1>
-
-        <p className="mt-3 text-base text-slate-500 md:text-xl">
-          Configuração oficial da metodologia
-        </p>
-      </div>
+<PageHeader
+  title="Empresa"
+  subtitle="Informações e configurações da empresa 🏢"
+/>
 
       <section className="rounded-3xl bg-white p-6 shadow-sm">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

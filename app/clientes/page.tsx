@@ -1,5 +1,7 @@
 "use client";
 
+import PageHeader from "@/components/ui/PageHeader";
+
 import { useEffect, useState } from "react";
 
 import { ClienteForm } from "@/components/clientes/ClienteForm";
@@ -73,27 +75,10 @@ export default function ClientesPage() {
           justify-between
         "
       >
-        <div>
-          <h1
-            className="
-              text-6xl
-              font-bold
-              text-slate-900
-            "
-          >
-            Clientes
-          </h1>
-
-          <p
-            className="
-              text-slate-500
-              text-2xl
-              mt-2
-            "
-          >
-            Gestão estratégica de clientes 👥
-          </p>
-        </div>
+ <PageHeader
+  title="Clientes"
+  subtitle="Gestão estratégica de clientes 👥"
+/>
 
         <button
           onClick={() =>
@@ -324,6 +309,25 @@ export default function ClientesPage() {
                         {cliente.tipo_cliente}
                       </span>
                     </td>
+
+                    <th>
+  Ações
+</th>
+
+<td>
+  <a
+    href={`/clientes/${cliente.id}`}
+    className="
+      rounded-xl
+      bg-blue-600
+      px-4
+      py-2
+      text-white
+    "
+  >
+    Ver
+  </a>
+</td>
                   </tr>
                 ))}
               </tbody>

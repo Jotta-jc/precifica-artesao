@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/ui/PageHeader";
 import Link from "next/link";
 
 import {
@@ -17,6 +18,9 @@ export default function ProdutosPage() {
 
   const [products, setProducts] =
     useState<any[]>([]);
+
+  const [categorias, setCategorias] =
+  useState<any[]>([]);  
 
   const [nome, setNome] =
     useState("");
@@ -49,9 +53,32 @@ export default function ProdutosPage() {
     setProducts(data || []);
   }
 
-  useEffect(() => {
-    carregarProdutos();
-  }, []);
+ async function carregarCategorias() {
+const { data, error } =
+  await supabase
+    .from("material_categories")
+    .select("id, nome")
+    .order("nome", {
+      ascending: true,
+    });
+
+if (error) {
+  console.error("ERRO CATEGORIAS MESSAGE:", error.message);
+  console.error("ERRO CATEGORIAS CODE:", error.code);
+  console.error("ERRO CATEGORIAS DETAILS:", error.details);
+  console.error("ERRO CATEGORIAS HINT:", error.hint);
+
+  return;
+}
+
+  setCategorias(data || []);
+  console.log("CATEGORIAS CARREGADAS:", data);
+} 
+
+useEffect(() => {
+  carregarProdutos();
+  carregarCategorias();
+}, []);
 
   async function salvarProduto() {
     if (
@@ -166,15 +193,10 @@ export default function ProdutosPage() {
 
   return (
     <main className="bg-gray-100 p-4 md:p-8">
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold text-gray-900 md:text-5xl">
-          Produtos
-        </h1>
-
-        <p className="mt-3 text-base text-gray-500 md:text-xl">
-          Cadastro de produtos do sistema 📦
-        </p>
-      </div>
+<PageHeader
+  title="Produtos"
+  subtitle="Cadastro e gerenciamento dos produtos 👜"
+/>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <button
@@ -434,27 +456,38 @@ export default function ProdutosPage() {
               "
             />
 
-            <input
-              placeholder="Categoria"
-              value={categoria}
-              onChange={(e) =>
-                setCategoria(
-                  e.target.value
-                )
-              }
-              className="
-                mb-4
-                w-full
-                rounded-2xl
-                border
-                border-slate-300
-                p-4
-                text-base
-                outline-none
-                transition-all
-                focus:border-slate-900
-              "
-            />
+<select
+  value={categoria}
+  onChange={(e) => setCategoria(e.target.value)}
+  className="
+    mb-4
+    w-full
+    rounded-2xl
+    border
+    border-slate-300
+    bg-white
+    p-4
+    text-slate-900
+    text-base
+    outline-none
+    transition-all
+    focus:border-slate-900
+  "
+>
+  <option value="" className="bg-white text-slate-900">
+    Selecione uma categoria
+  </option>
+
+  {categorias.map((categoriaItem) => (
+    <option
+      key={categoriaItem.id}
+      value={categoriaItem.id}
+      className="bg-white text-slate-900"
+    >
+      {categoriaItem.nome}
+    </option>
+  ))}
+</select>
 
             <input
               placeholder="Preço"

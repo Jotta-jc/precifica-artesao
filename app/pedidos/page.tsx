@@ -114,6 +114,33 @@ async function atualizarStatus(
   carregarPedidos();
 }
 
+async function excluirPedido(
+  pedidoId: number
+) {
+  const confirmar = confirm(
+    "Deseja excluir este pedido?"
+  );
+
+  if (!confirmar) return;
+
+  const { error } =
+    await supabase
+      .from("orders")
+      .delete()
+      .eq("id", pedidoId);
+
+  if (error) {
+    console.log(error);
+
+    alert(
+      "Erro ao excluir pedido"
+    );
+
+    return;
+  }
+
+  carregarPedidos();
+}
 useEffect(() => {
   carregarClientes();
 
@@ -460,6 +487,10 @@ async function salvarPedido() {
         <th className="p-3 text-left">
           Valor
         </th>
+
+        <th className="p-3 text-left">
+  Ações
+</th>
       </tr>
     </thead>
 
@@ -524,6 +555,52 @@ async function salvarPedido() {
   R$ {Number(
     pedido.valor_total
   ).toFixed(2)}
+</td>
+<td className="p-3">
+  <div className="flex gap-2">
+    <a
+      href={`/pedidos/${pedido.id}`}
+      className="
+        rounded-xl
+        bg-blue-600
+        px-4
+        py-2
+        text-white
+      "
+    >
+      Ver
+    </a>
+
+    <a
+      href={`/pedidos/${pedido.id}`}
+      className="
+        rounded-xl
+        bg-amber-500
+        px-4
+        py-2
+        text-white
+      "
+    >
+      Editar
+    </a>
+
+    <button
+      onClick={() =>
+        excluirPedido(
+          pedido.id
+        )
+      }
+      className="
+        rounded-xl
+        bg-red-600
+        px-4
+        py-2
+        text-white
+      "
+    >
+      Excluir
+    </button>
+  </div>
 </td>
           </tr>
         )
