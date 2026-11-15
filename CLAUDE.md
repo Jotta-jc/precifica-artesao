@@ -63,11 +63,11 @@ Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 
 ---
 
-## 3. Stack (versões conferidas em 14/11/2026)
+## 3. Stack (versões conferidas em 15/11/2026)
 
 | Pacote | Versão |
 |---|---|
-| next | 16.2.6 (App Router) |
+| next | 16.4.6 (App Router), atualizado em 15/11/2026 por segurança |
 | react / react-dom | 19.2.4 |
 | typescript | 5.9.3 |
 | tailwindcss | 4.3.0 (configurado via CSS, sem tailwind.config.js) |
@@ -76,12 +76,14 @@ Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 | recharts | 3.8.1 |
 | eslint | 9.39.4 |
 
-- **Não instalados:** Zod, TanStack Table, React Hook Form e qualquer biblioteca de testes. Se precisar, avise; não instale.
+- **Não instalados:** Zod, TanStack Table, React Hook Form e qualquer biblioteca de testes. Se precisar, avise; não instale. O Zod aparece em node_modules apenas como peça interna do ESLint; não é dependência do projeto e não deve ser importado sem autorização.
 - Scripts: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`.
 - Use `npm run build` para validar tipos e compilação ao final de cada tarefa.
 - Autenticação: Supabase Auth, só login com Google hoje (`/login` → `/auth/callback`). Falhas no retorno levam a `/login?erro=login`, com aviso na tela. O callback não registra código, URL nem sessão em log.
-- O `.env.local` usa a chave `anon` antiga (legada) do Supabase, que será desativada no início de 2027. A troca pela chave "publishable" nova está planejada.
+- O `.env.local` usa a chave `anon` antiga (legada) do Supabase, que será desativada no início de 2027. A troca pela chave "publishable" nova está planejada. Ao fazer essa troca, criar uma chave publishable NOVA no painel e desativar a antiga, que constava em documentos .docx no histórico do Git (já retirados do repositório).
 - O projeto usa `middleware.ts`. O Next.js 16 avisa que a convenção mudou para `proxy.ts`. **Não migre** sem prompt específico: envolve sessão, cookies e proteção de rotas.
+- A partir do Next.js 16.3, o `npm run dev` pode atualizar sozinho o bloco `nextjs-agent-rules` do AGENTS.md. Se o AGENTS.md aparecer alterado no git status, avise antes de commitar.
+- Documentos do Word (`*.docx`) não entram no repositório (estão no .gitignore). Anotações do projeto ficam em `C:\Users\jcges\Documents\Projeto VS\precifica-docs`.
 
 ---
 
@@ -218,7 +220,7 @@ O plano completo (Roadmap) é mantido pelo arquiteto. Resumo das fases:
 8. Pronto para vender (login por e-mail, LGPD, domínio, piloto, cobrança)
 9. IA (opcional)
 
-Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque; referência do schema versionada; bloqueio das exclusões em cascata; página inicial sem consulta ao banco; login sem logs sensíveis e com aviso de falha; permissões do banco ajustadas e tabela `test` removida; teste de isolamento com duas contas.
+Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque; referência do schema versionada; bloqueio das exclusões em cascata; página inicial sem consulta ao banco; login sem logs sensíveis e com aviso de falha; permissões do banco ajustadas e tabela `test` removida; teste de isolamento com duas contas; promessas de IA retiradas da interface; Next.js atualizado para 16.4.6; documentos .docx retirados do repositório.
 
 Não desenvolva funcionalidades que dependam de decisões ainda não tomadas.
 
