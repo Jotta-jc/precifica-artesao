@@ -18,9 +18,9 @@
   --color-perigo-suave: #FDECEA;
 }
 
-/* Fonte padrão: Atkinson Hyperlegible (variável criada em app/layout.tsx) */
+/* Fonte padrão: Nunito Sans (variável criada em app/layout.tsx) */
 @theme inline {
-  --font-sans: var(--font-atkinson), system-ui, sans-serif;
+  --font-sans: var(--font-principal), system-ui, sans-serif;
 }
 
 @layer base {

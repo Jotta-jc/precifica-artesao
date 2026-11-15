@@ -209,7 +209,7 @@ As telas de clientes, produtos e materiais tratam o código `23503` com mensagem
 - Mostre valores com rótulo amigável (ex.: "Em produção", não `producao`).
 - Confirmação antes de excluir, explicando a consequência.
 - **Visual aprovado (15/11/2026)**, referência: protótipo "Precifica+ — Protótipo do novo layout".
-- Fonte: Atkinson Hyperlegible (feita para pessoas com baixa visão), texto base 18px.
+- Fonte: Nunito Sans (escolhida em 15/11/2026: zero sem traço, que não se confunde com o 8; negrito firme). Texto base 18px. Variável CSS --font-principal.
 - Cores: fundo `#F6F4EF`; cartões brancos com borda `#DCD8CF`; texto `#1F2421`; texto secundário `#4E5651`; destaque verde-musgo `#2F5D50` (hover `#1F4238`, fundo suave `#E3EEE9`); aviso âmbar com fundo `#FDF1DC` e texto `#6B4100`; exclusão em vermelho escuro com bom contraste.
 - Ícones de linha (SVG) sempre acompanhados de texto. Não usar emojis como ícones.
 - Menu: no computador, lateral CLARA com o nome do sistema e do ateliê, ícone + texto e item ativo em verde suave; no celular, barra fixa embaixo com 5 itens (Início, Materiais, Produtos, Vendas, Vitrine). Sem fundo preto.

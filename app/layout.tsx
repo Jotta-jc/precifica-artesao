@@ -1,16 +1,16 @@
 import type { Metadata, Viewport } from "next";
 
-import { Atkinson_Hyperlegible } from "next/font/google";
+import { Nunito_Sans } from "next/font/google";
 
 import "./globals.css";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { NOME_SISTEMA } from "@/lib/marca";
 
-const atkinson = Atkinson_Hyperlegible({
-  weight: ["400", "700"],
+/* Fonte variável (sem fixar pesos): permite 400, 500, 600 e 700. */
+const fontePrincipal = Nunito_Sans({
   subsets: ["latin"],
-  variable: "--font-atkinson",
+  variable: "--font-principal",
 });
 
 export const metadata: Metadata = {
@@ -35,7 +35,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={atkinson.variable}
+      className={fontePrincipal.variable}
     >
       <body>
         <AppShell>{children}</AppShell>
