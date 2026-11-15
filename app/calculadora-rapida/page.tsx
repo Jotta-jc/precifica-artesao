@@ -259,7 +259,7 @@ function limparCalculadora() {
     <main className="p-8">
       <div className="mb-8">
         <h1 className="text-5xl font-black text-slate-900">
-          Calculadora Rápida
+          Cálculo rápido
         </h1>
 
         <p className="mt-3 text-xl text-slate-500">

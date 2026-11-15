@@ -129,8 +129,8 @@ async function loginGoogle() {
               text-slate-500
             "
           >
-            Plataforma inteligente de
-            valorização artesanal 🚀
+            Organize e precifique o seu
+            trabalho artesanal
           </p>
         </div>
 

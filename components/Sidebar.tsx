@@ -37,7 +37,7 @@ const menuItems = [
   icon: "📋",
 },
     {
-  label: "Calculadora Rápida",
+  label: "Cálculo rápido",
   href: "/calculadora-rapida",
   icon: "⚡",
 },
@@ -57,14 +57,9 @@ const menuItems = [
   icon: "📦",
 },
   {
-    label: "Calculadora Inteligente",
+    label: "Preço do produto",
     href: "/calculadora",
     icon: "🧮",
-  },
-  {
-    label: "Configurações IA",
-    href: "/configuracoes",
-    icon: "⚙️",
   },
 ];
 
@@ -355,7 +350,7 @@ export function Sidebar() {
               text-slate-500
             "
           >
-            SaaS Artesanal © 2025
+            Precifica+
           </p>
         </div>
       </aside>
