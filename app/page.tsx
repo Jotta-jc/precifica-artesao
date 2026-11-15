@@ -1,17 +1,5 @@
-import { createClient } from "@/lib/supabase/client";
+import { redirect } from "next/navigation";
 
-export default async function Home() {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("test")
-    .select("*");
-
-  console.log(data);
-  console.log(error);
-
-  return (
-    <main>
-      <h1>Supabase conectado 🚀</h1>
-    </main>
-  );
+export default function Home() {
+  redirect("/dashboard");
 }
