@@ -113,6 +113,8 @@ Fatos importantes:
 
 ## 5. Banco de dados (auditado em 14/11/2026)
 
+**Infraestrutura (decidido em 15/11/2026):** o Precifica+ é um produto vendido a terceiros e usa um projeto Supabase PRÓPRIO, com login próprio. Ele nunca deve ser ligado ao projeto `jc-empresa` nem a outros sistemas internos da JC.
+
 **Sempre confira o schema real antes de escrever consultas.** A referência do schema (14/11/2026) está em `supabase/migrations/20261114000000_baseline_referencia.sql`. As migrations posteriores, na mesma pasta, mostram o que mudou desde então.
 
 ### Segurança
@@ -122,6 +124,9 @@ Fatos importantes:
 - `knowledge_settings` e `profit_levels` são configurações globais: leitura para logados, sem escrita.
 - O visitante não logado (`anon`) não tem acesso a nenhuma tabela. Usuárias logadas (`authenticated`) têm só SELECT, INSERT, UPDATE e DELETE; `knowledge_settings` e `profit_levels` são só SELECT. Nunca conceda acesso a `anon`.
 - Isolamento testado na prática com duas contas Google (15/11/2026): uma conta não vê nem abre registros da outra.
+- Todas as políticas são para `authenticated` e usam `(select auth.uid())`, a forma rápida (o banco calcula a usuária uma vez por consulta). Toda política nova deve seguir esse padrão.
+- `user_id` é obrigatório (`not null`) em `products` e `materials`. `products`, `material_movements` e `business_metrics` têm ligação com `auth.users`.
+- As colunas usadas pelas políticas e pelas ligações têm índice (migration de 15/11/2026). Toda tabela nova deve ter índice em `user_id`.
 - Todo dado de negócio pertence a uma usuária. **Nunca use UUID fixo.** Obtenha a usuária autenticada dinamicamente.
 - GRANT não substitui POLICY. Toda tabela nova precisa de RLS, policies por operação e GRANT explícito:
 
@@ -179,6 +184,7 @@ As telas de clientes, produtos e materiais tratam o código `23503` com mensagem
 - A fórmula de preço existe hoje em 4 versões diferentes no código. **Não crie uma quinta.** A metodologia oficial será decidida pelo proprietário.
 - Margem e markup são diferentes. Margem é sobre o preço de venda; markup é sobre o custo.
 - "Configurações IA" e "Calculadora Inteligente" não usam IA. Não prometa IA na interface.
+- **Vitrine pública (Jornada 3):** o visitante (`anon`) continua SEM acesso às tabelas. A vitrine lerá apenas uma função ou view própria que entrega só os campos públicos (nome, descrição, foto, categoria, preço ou "sob consulta", prazo) dos produtos marcados como publicados, e os dados de contato do ateliê. Nunca expõe custo, margem, materiais, estoque, clientes ou pedidos. Essa exceção será desenhada e revisada em tarefa própria; não libere acesso de `anon` a tabelas para "resolver" a vitrine.
 
 ---
 
@@ -202,7 +208,12 @@ As telas de clientes, produtos e materiais tratam o código `23503` com mensagem
 - Dinheiro sempre no formato brasileiro (`R$ 12,50`), com `Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })`.
 - Mostre valores com rótulo amigável (ex.: "Em produção", não `producao`).
 - Confirmação antes de excluir, explicando a consequência.
-- Cores: azul principal `#0B1739`, hover `#152250`; exclusão em vermelho; fundo e cards brancos.
+- **Visual aprovado (15/11/2026)**, referência: protótipo "Precifica+ — Protótipo do novo layout".
+- Fonte: Atkinson Hyperlegible (feita para pessoas com baixa visão), texto base 18px.
+- Cores: fundo `#F6F4EF`; cartões brancos com borda `#DCD8CF`; texto `#1F2421`; texto secundário `#4E5651`; destaque verde-musgo `#2F5D50` (hover `#1F4238`, fundo suave `#E3EEE9`); aviso âmbar com fundo `#FDF1DC` e texto `#6B4100`; exclusão em vermelho escuro com bom contraste.
+- Ícones de linha (SVG) sempre acompanhados de texto. Não usar emojis como ícones.
+- Menu: no computador, lateral CLARA com o nome do sistema e do ateliê, ícone + texto e item ativo em verde suave; no celular, barra fixa embaixo com 5 itens (Início, Materiais, Produtos, Vendas, Vitrine). Sem fundo preto.
+- Linguagem do dia a dia: "Início" (não "Dashboard"), "Meu lucro", "Preço sugerido". Sem "Score", "Performance" ou "Premium".
 
 ---
 
@@ -210,17 +221,17 @@ As telas de clientes, produtos e materiais tratam o código `23503` com mensagem
 
 O plano completo (Roadmap) é mantido pelo arquiteto. Resumo das fases:
 
-1. **Fundação segura** ← fase atual
-2. Decisões de negócio (preço, status, categorias, unidades, aulas, equipe)
-3. Consolidação do banco (inclui categoria própria de produto)
-4. Kit visual acessível
-5. Precificação (motor único com testes)
-6. Pedidos e estoque (vários itens, transação, estorno)
-7. Painel do negócio
-8. Pronto para vender (login por e-mail, LGPD, domínio, piloto, cobrança)
+1. Fundação segura e base do banco para escala ✅
+2. Protótipo visual ✅ (aprovado)
+3. **Kit visual e menu novo** ← fase atual
+4. Jornada 1 — Materiais (compras, estoque, unidades de compra × uso)
+5. Jornada 2 — Produtos (categorias de produto, ficha técnica, preço único)
+6. Jornada 3 — Vitrine pública, pedidos e clientes
+7. Início com os números do negócio
+8. Pronto para vender (login por e-mail, LGPD, domínio, publicação, cobrança)
 9. IA (opcional)
 
-Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque; referência do schema versionada; bloqueio das exclusões em cascata; página inicial sem consulta ao banco; login sem logs sensíveis e com aviso de falha; permissões do banco ajustadas e tabela `test` removida; teste de isolamento com duas contas; promessas de IA retiradas da interface; Next.js atualizado para 16.4.6; documentos .docx retirados do repositório.
+Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque; referência do schema versionada; bloqueio das exclusões em cascata; página inicial sem consulta ao banco; login sem logs sensíveis e com aviso de falha; permissões do banco ajustadas e tabela `test` removida; teste de isolamento com duas contas; promessas de IA retiradas da interface; Next.js atualizado para 16.4.6; documentos .docx retirados do repositório; base do banco para escala (políticas com (select auth.uid()), índices, user_id obrigatório).
 
 Não desenvolva funcionalidades que dependam de decisões ainda não tomadas.
 
