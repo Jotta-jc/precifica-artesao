@@ -1,4 +1,5 @@
 @AGENTS.md
+
 # CLAUDE.md — Precifica+
 
 Instruções permanentes para o Claude Code neste repositório.
