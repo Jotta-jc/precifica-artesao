@@ -1,13 +1,48 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+
+function AvisoErroLogin() {
+  const searchParams =
+    useSearchParams();
+
+  if (searchParams.get("erro") !== "login") {
+    return null;
+  }
+
+  return (
+    <div
+      role="alert"
+      className="
+        mb-6
+        rounded-2xl
+        border
+        border-red-300
+        bg-red-50
+        p-4
+        text-base
+        font-semibold
+        leading-relaxed
+        text-red-800
+      "
+    >
+      Não foi possível entrar. Tente
+      novamente. Se o problema
+      continuar, fale com o suporte.
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -98,6 +133,10 @@ async function loginGoogle() {
             valorização artesanal 🚀
           </p>
         </div>
+
+        <Suspense fallback={null}>
+          <AvisoErroLogin />
+        </Suspense>
 
         <button
           onClick={loginGoogle}

@@ -7,33 +7,28 @@ export async function GET(request: Request) {
   const code =
     requestUrl.searchParams.get("code");
 
- console.log(
-  "URL COMPLETA:",
-  request.url
-);
+  if (!code) {
+    return NextResponse.redirect(
+      `${requestUrl.origin}/login?erro=login`
+    );
+  }
 
-console.log(
-  "SEARCH:",
-  requestUrl.search
-);
+  const supabase =
+    await createClient();
 
-console.log(
-  "CODE:",
-  code
-);
+  const { error } =
+    await supabase.auth.exchangeCodeForSession(
+      code
+    );
 
-  if (code) {
-    const supabase =
-      await createClient();
+  if (error) {
+    console.error(
+      "Falha ao concluir o login:",
+      error.message
+    );
 
-    const result =
-      await supabase.auth.exchangeCodeForSession(
-        code
-      );
-
-    console.log(
-      "SESSION:",
-      result.error
+    return NextResponse.redirect(
+      `${requestUrl.origin}/login?erro=login`
     );
   }
 
