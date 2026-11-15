@@ -1,77 +1,35 @@
-"use client";
-
 import type { Metadata } from "next";
 
-import {
-  Geist,
-  Geist_Mono,
-} from "next/font/google";
-
-import {
-  usePathname,
-} from "next/navigation";
+import { Atkinson_Hyperlegible } from "next/font/google";
 
 import "./globals.css";
 
-import { Sidebar } from "@/components/Sidebar";
+import { AppShell } from "@/components/layout/AppShell";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const atkinson = Atkinson_Hyperlegible({
+  weight: ["400", "700"],
   subsets: ["latin"],
+  variable: "--font-atkinson",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const hiddenSidebarRoutes = [
-  "/login",
-  "/auth/callback",
-];
+export const metadata: Metadata = {
+  title: "Precifica+",
+  description:
+    "Organize e precifique o seu trabalho artesanal",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname =
-    usePathname();
-
-  const hideSidebar =
-    hiddenSidebarRoutes.some(
-      (route) =>
-        pathname.startsWith(route)
-    );
-
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      className={atkinson.variable}
     >
-      <body
-        className="
-          bg-gray-100
-          text-slate-900
-        "
-      >
-<div className="flex min-h-screen">
-  {!hideSidebar && (
-    <Sidebar />
-  )}
-
-  <main
-    className="
-      flex-1
-      pt-[72px]
-
-      md:pl-[220px]
-      md:pt-0
-    "
-  >
-    {children}
-  </main>
-</div>
+      <body>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

@@ -1,26 +1,36 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Cores do visual aprovado (CLAUDE.md, seção 7) */
+@theme {
+  --color-fundo: #F6F4EF;
+  --color-cartao: #FFFFFF;
+  --color-borda: #DCD8CF;
+  --color-texto: #1F2421;
+  --color-texto-suave: #4E5651;
+  --color-destaque: #2F5D50;
+  --color-destaque-escuro: #1F4238;
+  --color-destaque-suave: #E3EEE9;
+  --color-aviso-fundo: #FDF1DC;
+  --color-aviso-texto: #6B4100;
+  --color-perigo: #B42318;
+  --color-perigo-suave: #FDECEA;
 }
 
+/* Fonte padrão: Atkinson Hyperlegible (variável criada em app/layout.tsx) */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-atkinson), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: light;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    background-color: var(--color-fundo);
+    color: var(--color-texto);
+    font-family: var(--font-sans);
+    font-size: 1.125rem;
+    line-height: 1.5;
+  }
 }
