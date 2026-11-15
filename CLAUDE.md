@@ -7,13 +7,17 @@ Leia este arquivo inteiro antes de qualquer tarefa.
 
 ---
 
-## 1. O projeto
+## 1. O produto
 
-**Precifica+** (marca complementar: **Jotta Art**) é um sistema web de gestão e precificação para pequenos negócios artesanais (bolsas e acessórios).
+**Precifica+** (nome provisório; o nome final será definido para registro de domínio) é um sistema web de gestão e precificação vendido como serviço para **qualquer artesão**: crochê, costura, bijuteria, sabonetes, velas, cerâmica etc.
 
-Objetivo: integrar clientes, produtos, materiais, estoque, pedidos, custos, ficha técnica e formação de preço em um só sistema.
+- Público inicial: mais de 1.000 alunas de um curso de crochê de bolsas, muitas com **mais de 60 anos**.
+- Uso principal no **celular**, mas tudo deve funcionar no computador.
+- Objetivo: integrar materiais, produtos, ficha técnica, custo, preço, clientes, pedidos e estoque.
+- Não deixe nada fixo de um nicho (crochê, bolsa) nem de uma marca específica.
 
 Diretório local: `C:\Users\Samsung\Documents\precifica-artesao` (Windows, VS Code, PowerShell).
+Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 
 ---
 
@@ -35,17 +39,17 @@ Diretório local: `C:\Users\Samsung\Documents\precifica-artesao` (Windows, VS Co
 ### Git
 
 - **Commit apenas local**, e só quando o prompt pedir.
-- **Push somente depois que o Juarez testar** e autorizar explicitamente.
+- **Push somente depois que o Juarez testar** e autorizar explicitamente. Nunca use `--force`.
 - Antes de qualquer alteração, rode `git status` e preserve as alterações locais existentes.
 - **Proibido sem autorização explícita:** `git reset --hard`, `git clean`, `git checkout -- .`, `git push --force`, rebase, ou qualquer comando que descarte trabalho.
 
 ### Segredos
 
-- **Nunca leia, exiba, copie ou comente o conteúdo de `.env`, `.env.local` ou similares.** Se precisar saber quais variáveis o código usa, procure os nomes no código-fonte (ex.: `process.env.`), não no arquivo.
-- Nunca peça senhas, chaves ou tokens.
+- **Nunca leia, exiba, copie ou comente o conteúdo de `.env`, `.env.local` ou similares.** Para saber quais variáveis existem, procure os nomes no código (`process.env.`).
+- Nunca peça senhas, chaves ou tokens. Se o Git ou outra ferramenta pedir login, avise o Juarez para ele fazer a autenticação.
 - Nunca coloque segredos em código, logs, commits ou documentação.
 - Nunca use `service_role` em variáveis `NEXT_PUBLIC_` ou em código que rode no navegador.
-- `.env.local` não deve ser versionado (confirme no `.gitignore`).
+- Variáveis usadas hoje: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`. O `.env*` está no `.gitignore`.
 
 ### Proibido sem autorização explícita
 
@@ -58,26 +62,24 @@ Diretório local: `C:\Users\Samsung\Documents\precifica-artesao` (Windows, VS Co
 
 ---
 
-## 3. Stack
+## 3. Stack (versões conferidas em 14/11/2026)
 
-| Camada | Tecnologia |
+| Pacote | Versão |
 |---|---|
-| Frontend | Next.js (App Router), React, TypeScript, Tailwind CSS |
-| Backend | Supabase (Auth, PostgreSQL, RLS) |
-| Autenticação | Supabase Auth com Google OAuth; tela em `/login` |
-| Hospedagem | Local (`npm run dev` → `http://localhost:3000`). Vercel planejada |
+| next | 16.2.6 (App Router) |
+| react / react-dom | 19.2.4 |
+| typescript | 5.9.3 |
+| tailwindcss | 4.3.0 (configurado via CSS, sem tailwind.config.js) |
+| @supabase/supabase-js | 2.105.4 |
+| @supabase/ssr | 0.10.3 |
+| recharts | 3.8.1 |
+| eslint | 9.39.4 |
 
-- Next.js **16.2.6** foi observado na interface; confirme no `package.json`.
-- Bibliotecas do padrão desejado (Zod, Recharts, TanStack Table, React Hook Form): **verifique se estão instaladas antes de usar.** Se não estiverem, avise; não instale.
-- Testes automatizados: não presuma Jest, Vitest ou Playwright. Consulte os `scripts` do `package.json`.
-
-### Comandos
-
-```bash
-npm run dev     # desenvolvimento
-npm run build   # build de produção (use para validar tipos e build)
-npm run start   # rodar o build
-```
+- **Não instalados:** Zod, TanStack Table, React Hook Form e qualquer biblioteca de testes. Se precisar, avise; não instale.
+- Scripts: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`.
+- Use `npm run build` para validar tipos e compilação ao final de cada tarefa.
+- Autenticação: Supabase Auth, só login com Google hoje (`/login` → `/auth/callback`).
+- O projeto usa `middleware.ts`. O Next.js 16 avisa que a convenção mudou para `proxy.ts`. **Não migre** sem prompt específico: envolve sessão, cookies e proteção de rotas.
 
 ---
 
@@ -85,56 +87,38 @@ npm run start   # rodar o build
 
 ```text
 app/          páginas e rotas (App Router)
-components/   componentes reutilizáveis
-  crud/       CrudModal, CrudPage, CrudTable, CrudToolbar
-  forms/      TextField, MoneyField, QuantityField, SelectField, ...
-  ui/         Badge, Button, Card, ConfirmDialog, EmptyState, Loading, ...
-lib/supabase/ clientes Supabase
-services/     acesso a dados e regras de negócio (*.service.ts)
-types/        tipos TypeScript compartilhados
+components/   componentes
+  crud/ forms/ ui/   em grande parte ARQUIVOS VAZIOS (reservados para o futuro kit visual)
+  products/   componentes de produto em uso
+lib/supabase/ client.ts (navegador) e server.ts (servidor)
+services/     acesso a dados; vários arquivos ainda vazios
+types/        tipos; vários arquivos ainda vazios
+middleware.ts proteção de rotas
 ```
 
-Módulos em `app/`: dashboard, empresa, clientes (`[id]`), pedidos (`[id]`), produtos, materiais, estoque, calculadora, configuracoes, login.
+Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora`, `/calculadora-rapida`, `/configuracoes`.
 
-### Atenção
+Fatos importantes:
 
-- Existem **`components/products/` e `components/produtos/`**. Não exclua nem mescle sem verificar todos os imports.
-- O aviso *"The middleware file convention is deprecated. Please use proxy instead"* aparece no terminal. **Não migre** `middleware.ts` → `proxy.ts` sem prompt específico: isso envolve sessão, cookies e proteção de rotas.
+- O layout raiz é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador.
+- A página `/` é uma página de teste que consulta a tabela `test`.
+- Existe apenas `components/products/` (não existe `components/produtos/`).
+- Há cerca de 80 `console.*` de diagnóstico e 36 erros de lint. Não corrija fora do escopo do prompt.
 
 ---
 
-## 5. Banco de dados (Supabase)
+## 5. Banco de dados (auditado em 14/11/2026)
 
-**Sempre confira o schema real antes de escrever consultas.** Os nomes no banco nem sempre batem com os do frontend.
+**Sempre confira o schema real antes de escrever consultas.** Ainda não há migrations versionadas: o schema só existe no painel do Supabase.
 
-Tabelas conhecidas: `clientes`, `orders`, `material_categories`, e produtos (nome exato da tabela a confirmar).
+### Segurança
 
-### `material_categories` (confirmada)
-
-| Coluna | Tipo |
-|---|---|
-| `id` | bigint |
-| `user_id` | uuid (obrigatório) |
-| `nome` | text |
-| `ativo` | boolean |
-| `created_at` | timestamptz |
-| `updated_at` | timestamptz |
-
-- A coluna é **`nome`**, não `name`.
-- Já existem 16 categorias cadastradas na conta de desenvolvimento. **Não insira de novo.**
-
-### `orders` (parcial)
-
-Colunas usadas na tela de cliente: `id`, `client_id`, `status`, `valor_total`, `created_at`. Verifique o restante antes de integrar.
-
-### Multiusuário e segurança
-
-- Todo dado de negócio pertence a um usuário (`user_id`).
-- **Nunca use UUID de usuário fixo no código.** Obtenha o usuário autenticado dinamicamente.
-- O isolamento deve ser garantido por **RLS no PostgreSQL**, não só por filtro no frontend.
-- Toda tabela nova precisa de: RLS ativado, policies por operação, GRANT explícito, isolamento por `user_id`.
-
-Padrão de GRANT:
+- **RLS ativo em todas as tabelas**, com policies de isolamento por usuária (`auth.uid() = user_id`).
+- Tabelas filhas são protegidas pela mãe: `order_items` pelo pedido, `product_materials` pelo produto.
+- `knowledge_settings` e `profit_levels` são configurações globais: leitura para logados, sem escrita.
+- O papel `anon` tem permissões excessivas em várias tabelas (a corrigir). Nunca libere mais acesso a `anon`.
+- Todo dado de negócio pertence a uma usuária. **Nunca use UUID fixo.** Obtenha a usuária autenticada dinamicamente.
+- GRANT não substitui POLICY. Toda tabela nova precisa de RLS, policies por operação e GRANT explícito:
 
 ```sql
 grant select, insert, update, delete on public.nome_tabela to authenticated;
@@ -142,21 +126,45 @@ grant all on public.nome_tabela to service_role;
 alter table public.nome_tabela enable row level security;
 ```
 
-GRANT não substitui POLICY. Nunca libere acesso a `anon` sem necessidade.
-Não afirme que as tabelas atuais seguem esse padrão: isso ainda precisa ser auditado.
+### Tabelas em uso pelo código
+
+| Tabela | Observações |
+|---|---|
+| `clientes` | id uuid; `tipo_cliente` aceita só `cliente`, `revendedor`, `parceiro` |
+| `orders` | id bigint; `client_id` → clientes; status padrão `orcamento`; `estoque_baixado` |
+| `order_items` | `order_id`, `product_id`, quantidade, valor_unitario, valor_total |
+| `products` | `categoria` é texto (hoje grava o id de material_categories: erro conhecido) |
+| `materials` | **`estoque_atual` é a coluna de estoque oficial na prática**; `estoque` é legada |
+| `product_materials` | **ficha técnica, já existe e está em uso** |
+| `material_movements` | `tipo` aceita só `entrada`, `saida`, `ajuste` |
+| `material_categories` | coluna `nome` (não `name`); 16 categorias de teste já cadastradas — não reinserir |
+| `business_metrics` | uma linha por usuária (`user_id` único); valor/hora |
+| `pricing_settings` | gravada pela tela "Configurações IA", mas não usada em nenhum cálculo |
+| `knowledge_settings`, `profit_levels` | globais; o código carrega mas não usa |
+
+### Tabelas que existem mas o código não usa
+
+`material_units`, `material_brands`, `material_colors`, `material_subcategories` (modelo completo de materiais, com unidade de compra × consumo), `artisan_profile`, `profiles` (preenchida pela função `handle_new_user` no cadastro), `product_pricing` (colunas repetidas em inglês e português) e `test`.
+
+### Atenção: exclusões em cascata
+
+- Apagar um **cliente** apaga todos os **pedidos** dele.
+- Apagar um **produto** apaga os **itens de pedidos** que o contêm.
+- Apagar um **material** apaga suas linhas de ficha técnica e o histórico de estoque.
+
+Não crie fluxos de exclusão novos sem considerar isso.
 
 ---
 
-## 6. Regra de negócio central
+## 6. Regras de negócio
 
-**Materiais são insumos. Produtos são itens finais vendidos.**
-
-- Materiais: tecido, fio, zíper, argola, alça.
-- Produtos: Bolsa Aleška, Bolsa Maria, carteira, mochila.
-- Um produto consome vários materiais por meio de uma **ficha técnica** (estrutura futura, ex.: `product_materials` — nome ainda não aprovado nem criado).
-- **`material_categories` não deve classificar produtos.** Hoje `app/produtos/page.tsx` carrega categorias dessa tabela: isso é um erro arquitetural conhecido, a ser corrigido em etapa própria.
-- A estrutura de categorias de produtos ainda não foi decidida. Não crie sem aprovação.
-- Margem de lucro e markup são conceitos diferentes. Não os confunda nos cálculos.
+- **Materiais são insumos. Produtos são o que a artesã vende.**
+- **Produto não usa `material_categories`.** Categoria de material classifica material; produto terá categoria própria (correção planejada).
+- Aulas e cursos devem poder ser vendidos (provável tipo de item sem materiais e sem estoque — decisão pendente).
+- Editar o cadastro de um material **nunca** altera o estoque. O estoque só muda por movimentações (`material_movements`).
+- A fórmula de preço existe hoje em 4 versões diferentes no código. **Não crie uma quinta.** A metodologia oficial será decidida pelo proprietário.
+- Margem e markup são diferentes. Margem é sobre o preço de venda; markup é sobre o custo.
+- "Configurações IA" e "Calculadora Inteligente" não usam IA. Não prometa IA na interface.
 
 ---
 
@@ -164,38 +172,43 @@ Não afirme que as tabelas atuais seguem esse padrão: isso ainda precisa ser au
 
 - Server Components por padrão; Client Components (`"use client"`) só quando houver interatividade.
 - Acesso a dados concentrado em `services/`, respeitando a separação cliente/servidor.
-- Reaproveite `components/ui`, `components/forms` e `components/crud` antes de criar novos.
 - Tipagem forte; evite `any`.
-- Trate erros e mostre estados de carregamento e vazio.
-- Remova `console.log` de diagnóstico quando o prompt pedir limpeza.
+- Trate erros e sempre mostre estados de carregamento, lista vazia e erro (nunca deixe a tela presa em "Carregando...").
+- Não deixe `console.log` de diagnóstico em código novo. Nunca registre dados de login em log.
 
-### Interface
+### Interface: requisitos obrigatórios (público 60+ e celular)
 
-- Sidebar escura fixa à esquerda; fundo e cards brancos; bordas em tons de slate.
-- Azul principal `#0B1739`, hover `#152250`. Exclusão em vermelho.
-- Campos `<select>` e `<option>` com `bg-white text-slate-900`.
-- Textos da interface em português, linguagem simples para pequenos empreendedores.
+- **Celular primeiro.** Toda tela deve funcionar a partir de 360px de largura, sem rolagem horizontal da página.
+- Fonte de conteúdo com no mínimo 16px; prefira 18px para textos importantes. Evite `text-xs` e `text-sm` em conteúdo.
+- Botões e áreas de toque com no mínimo 44px de altura (de preferência 48px).
+- Todo campo com rótulo visível (`<label htmlFor>`), não só texto de exemplo.
+- Botões só com ícone precisam de `aria-label`.
+- Contraste forte: evite `slate-400` sobre branco em textos.
+- Mensagens em português simples. Nunca mostre o erro técnico do banco para a usuária.
+- Dinheiro sempre no formato brasileiro (`R$ 12,50`), com `Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })`.
+- Mostre valores com rótulo amigável (ex.: "Em produção", não `producao`).
+- Confirmação antes de excluir, explicando a consequência.
+- Cores: azul principal `#0B1739`, hover `#152250`; exclusão em vermelho; fundo e cards brancos.
 
 ---
 
 ## 8. Situação atual e ordem de trabalho
 
-Fase atual: **auditoria somente leitura**, depois separação entre Produtos e Materiais.
+O plano completo (Roadmap) é mantido pelo arquiteto. Resumo das fases:
 
-Ordem planejada (não pule etapas):
+1. **Fundação segura** ← fase atual
+2. Decisões de negócio (preço, status, categorias, unidades, aulas, equipe)
+3. Consolidação do banco (inclui categoria própria de produto)
+4. Kit visual acessível
+5. Precificação (motor único com testes)
+6. Pedidos e estoque (vários itens, transação, estorno)
+7. Painel do negócio
+8. Pronto para vender (login por e-mail, LGPD, domínio, piloto, cobrança)
+9. IA (opcional)
 
-1. Auditoria do código e do banco (sem alterar nada)
-2. Separação Produtos × Materiais
-3. Revisão dos cadastros de materiais e produtos
-4. Ficha técnica
-5. Custo de fabricação
-6. Precificação
-7. Estoque integrado
-8. Pedidos integrados
-9. Dashboard
-10. Segurança e produção
+Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque.
 
-Não desenvolva funcionalidades que dependam de estruturas ainda não definidas.
+Não desenvolva funcionalidades que dependam de decisões ainda não tomadas.
 
 ---
 
