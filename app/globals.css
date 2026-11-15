@@ -5,6 +5,8 @@
   --color-fundo: #F6F4EF;
   --color-cartao: #FFFFFF;
   --color-borda: #DCD8CF;
+  /* Contorno de campos de formulário: ~3,7:1 sobre branco (mínimo 3:1) */
+  --color-borda-campo: #8A8478;
   --color-texto: #1F2421;
   --color-texto-suave: #4E5651;
   --color-destaque: #2F5D50;

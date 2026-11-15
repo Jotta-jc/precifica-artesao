@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 
 import { Sidebar } from "@/components/Sidebar";
+import { AvisosProvider } from "@/components/ui/Avisos";
 
 const hiddenSidebarRoutes = [
   "/login",
@@ -24,22 +25,24 @@ export function AppShell({
     );
 
   return (
-    <div className="flex min-h-screen">
-      {!hideSidebar && (
-        <Sidebar />
-      )}
+    <AvisosProvider>
+      <div className="flex min-h-screen">
+        {!hideSidebar && (
+          <Sidebar />
+        )}
 
-      <main
-        className="
-          flex-1
-          pt-[72px]
+        <main
+          className="
+            flex-1
+            pt-[72px]
 
-          md:pl-[220px]
-          md:pt-0
-        "
-      >
-        {children}
-      </main>
-    </div>
+            md:pl-[220px]
+            md:pt-0
+          "
+        >
+          {children}
+        </main>
+      </div>
+    </AvisosProvider>
   );
 }
