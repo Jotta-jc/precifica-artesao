@@ -125,6 +125,14 @@ useEffect(() => {
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    alert(
+      "Sua sessão expirou. Entre novamente para salvar."
+    );
+
+    return;
+  }
+
   const { error } =
     await supabase
       .from("products")
@@ -132,7 +140,7 @@ useEffect(() => {
         nome,
         categoria,
         preco: Number(preco),
-        user_id: user?.id,
+        user_id: user.id,
       });
 
   if (error) {
