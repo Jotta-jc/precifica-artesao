@@ -11,6 +11,7 @@ import {
   useSearchParams,
 } from "next/navigation";
 
+import { NOME_SISTEMA } from "@/lib/marca";
 import { createClient } from "@/lib/supabase/client";
 
 function AvisoErroLogin() {
@@ -118,7 +119,7 @@ async function loginGoogle() {
               text-slate-900
             "
           >
-            Precifica+
+            {NOME_SISTEMA}
           </h1>
 
           <p

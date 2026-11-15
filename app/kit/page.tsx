@@ -23,6 +23,7 @@ import {
   formatarNumero,
   lerNumero,
 } from "@/lib/formatar";
+import { NOME_SISTEMA } from "@/lib/marca";
 
 const exemplosMoeda = [0, 12.5, 1234.5, NaN];
 const exemplosNumero: [number, number | undefined][] = [
@@ -93,7 +94,7 @@ export default function KitPage() {
 
       <CabecalhoPagina
         titulo="Kit visual"
-        subtitulo="Componentes base do Precifica+ com o visual aprovado."
+        subtitulo={`Componentes base do ${NOME_SISTEMA} com o visual aprovado.`}
         acao={
           <Button icone="mais">Novo produto</Button>
         }

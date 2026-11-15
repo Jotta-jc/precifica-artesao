@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { NOME_SISTEMA } from "@/lib/marca";
 import { createClient } from "@/lib/supabase/client";
 
 import { getKnowledgeSettings } from "@/services/knowledgeSettings.service";
@@ -364,7 +365,7 @@ const minimumMargin =
         </h1>
 
         <p className="mt-3 text-xl text-slate-500">
-          Metodologia Oficial Precifica+
+          Metodologia Oficial {NOME_SISTEMA}
         </p>
       </div>
 

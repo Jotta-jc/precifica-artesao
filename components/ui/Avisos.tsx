@@ -88,14 +88,14 @@ export function AvisosProvider({
     <Contexto.Provider value={{ avisar }}>
       {children}
 
-      {/* Celular: acima da futura barra de menu (bottom 96px).
+      {/* Celular: acima da barra de menu (96px + área segura do iPhone).
           Computador: canto inferior direito. */}
       <div
         className="
           pointer-events-none
           fixed
           inset-x-4
-          bottom-24
+          bottom-[calc(96px+env(safe-area-inset-bottom))]
           z-[60]
           flex
           flex-col

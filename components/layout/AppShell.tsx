@@ -2,7 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
-import { Sidebar } from "@/components/Sidebar";
+import { MenuInferior } from "@/components/layout/MenuInferior";
+import { MenuLateral } from "@/components/layout/MenuLateral";
 import { AvisosProvider } from "@/components/ui/Avisos";
 
 const hiddenSidebarRoutes = [
@@ -28,17 +29,24 @@ export function AppShell({
     <AvisosProvider>
       <div className="flex min-h-screen">
         {!hideSidebar && (
-          <Sidebar />
+          <>
+            <MenuLateral />
+            <MenuInferior />
+          </>
         )}
 
+        {/* Com menu: no computador, espaço da lateral (256px); no celular,
+            espaço embaixo para a barra (96px + área segura). */}
         <main
-          className="
+          className={`
+            min-w-0
             flex-1
-            pt-[72px]
-
-            md:pl-[220px]
-            md:pt-0
-          "
+            ${
+              hideSidebar
+                ? ""
+                : "pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-0 md:pl-64"
+            }
+          `}
         >
           {children}
         </main>
