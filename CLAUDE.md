@@ -16,7 +16,7 @@ Leia este arquivo inteiro antes de qualquer tarefa.
 - Objetivo: integrar materiais, produtos, ficha técnica, custo, preço, clientes, pedidos e estoque.
 - Não deixe nada fixo de um nicho (crochê, bolsa) nem de uma marca específica.
 
-Diretório local: `C:\Users\Samsung\Documents\precifica-artesao` (Windows, VS Code, PowerShell).
+Diretório local: `C:\Users\jcges\Documents\Projeto VS\precifica-artesao` (Windows, VS Code, PowerShell). O caminho tem espaço: use aspas nos comandos do PowerShell. O desenvolvimento era feito antes num notebook; hoje é feito neste PC.
 Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 
 ---
@@ -54,6 +54,7 @@ Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 ### Proibido sem autorização explícita
 
 - Instalar ou remover dependências.
+- `npm audit fix`, e principalmente `npm audit fix --force` (pode trocar versões principais e quebrar o sistema).
 - Executar migrações ou alterar o banco Supabase.
 - `DROP TABLE`, `DELETE`/`UPDATE` em massa, `TRUNCATE`.
 - Desativar RLS para "resolver" erro de consulta.
@@ -78,7 +79,8 @@ Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 - **Não instalados:** Zod, TanStack Table, React Hook Form e qualquer biblioteca de testes. Se precisar, avise; não instale.
 - Scripts: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`.
 - Use `npm run build` para validar tipos e compilação ao final de cada tarefa.
-- Autenticação: Supabase Auth, só login com Google hoje (`/login` → `/auth/callback`).
+- Autenticação: Supabase Auth, só login com Google hoje (`/login` → `/auth/callback`). Falhas no retorno levam a `/login?erro=login`, com aviso na tela. O callback não registra código, URL nem sessão em log.
+- O `.env.local` usa a chave `anon` antiga (legada) do Supabase, que será desativada no início de 2027. A troca pela chave "publishable" nova está planejada.
 - O projeto usa `middleware.ts`. O Next.js 16 avisa que a convenção mudou para `proxy.ts`. **Não migre** sem prompt específico: envolve sessão, cookies e proteção de rotas.
 
 ---
@@ -101,7 +103,7 @@ Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `
 Fatos importantes:
 
 - O layout raiz é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador.
-- A página `/` é uma página de teste que consulta a tabela `test`.
+- A página `/` só redireciona para `/dashboard` (quem não está logado vai antes para `/login` pelo middleware).
 - Existe apenas `components/products/` (não existe `components/produtos/`).
 - Há cerca de 80 `console.*` de diagnóstico e 36 erros de lint. Não corrija fora do escopo do prompt.
 
@@ -116,7 +118,8 @@ Fatos importantes:
 - **RLS ativo em todas as tabelas**, com policies de isolamento por usuária (`auth.uid() = user_id`).
 - Tabelas filhas são protegidas pela mãe: `order_items` pelo pedido, `product_materials` pelo produto.
 - `knowledge_settings` e `profit_levels` são configurações globais: leitura para logados, sem escrita.
-- O papel `anon` tem permissões excessivas em várias tabelas (a corrigir). Nunca libere mais acesso a `anon`.
+- O visitante não logado (`anon`) não tem acesso a nenhuma tabela. Usuárias logadas (`authenticated`) têm só SELECT, INSERT, UPDATE e DELETE; `knowledge_settings` e `profit_levels` são só SELECT. Nunca conceda acesso a `anon`.
+- Isolamento testado na prática com duas contas Google (15/11/2026): uma conta não vê nem abre registros da outra.
 - Todo dado de negócio pertence a uma usuária. **Nunca use UUID fixo.** Obtenha a usuária autenticada dinamicamente.
 - GRANT não substitui POLICY. Toda tabela nova precisa de RLS, policies por operação e GRANT explícito:
 
@@ -144,7 +147,7 @@ alter table public.nome_tabela enable row level security;
 
 ### Tabelas que existem mas o código não usa
 
-`material_units`, `material_brands`, `material_colors`, `material_subcategories` (modelo completo de materiais, com unidade de compra × consumo), `artisan_profile`, `profiles` (preenchida pela função `handle_new_user` no cadastro), `product_pricing` (colunas repetidas em inglês e português) e `test`.
+`material_units`, `material_brands`, `material_colors`, `material_subcategories` (modelo completo de materiais, com unidade de compra × consumo), `artisan_profile`, `profiles` (preenchida pela função `handle_new_user` no cadastro) e `product_pricing` (colunas repetidas em inglês e português). A tabela `test` foi removida em 14/11/2026.
 
 ### Exclusões bloqueadas (migration de 14/11/2026)
 
@@ -215,7 +218,7 @@ O plano completo (Roadmap) é mantido pelo arquiteto. Resumo das fases:
 8. Pronto para vender (login por e-mail, LGPD, domínio, piloto, cobrança)
 9. IA (opcional)
 
-Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque; referência do schema versionada; bloqueio das exclusões em cascata.
+Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque; referência do schema versionada; bloqueio das exclusões em cascata; página inicial sem consulta ao banco; login sem logs sensíveis e com aviso de falha; permissões do banco ajustadas e tabela `test` removida; teste de isolamento com duas contas.
 
 Não desenvolva funcionalidades que dependam de decisões ainda não tomadas.
 
