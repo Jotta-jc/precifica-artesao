@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Icone, nomesIcones } from "@/components/ui/Icone";
+import { LinkBotao } from "@/components/ui/LinkBotao";
 import { Loading } from "@/components/ui/Loading";
 import {
   formatarMoeda,
@@ -140,6 +141,23 @@ export default function KitPage() {
               <Button larguraTotal icone="sucesso">
                 Confirmar pedido
               </Button>
+            </div>
+
+            <div>
+              <h3 className="mb-3 text-lg font-bold text-texto-suave">
+                Link com aparência de botão (LinkBotao)
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                <LinkBotao href="/clientes/novo" icone="mais">
+                  Novo cliente
+                </LinkBotao>
+                <LinkBotao href="/clientes" variante="secundario">
+                  Ver clientes
+                </LinkBotao>
+                <LinkBotao href="/dashboard" variante="discreto" icone="voltar">
+                  Voltar para o início
+                </LinkBotao>
+              </div>
             </div>
           </div>
         </Cartao>

@@ -1,340 +1,214 @@
 "use client";
 
-import PageHeader from "@/components/ui/PageHeader";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
-import { useEffect, useState } from "react";
+import { TextField } from "@/components/forms/TextField";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Icone } from "@/components/ui/Icone";
+import { LinkBotao } from "@/components/ui/LinkBotao";
+import { Loading } from "@/components/ui/Loading";
+import { rotuloTipoCliente } from "@/lib/clientes";
+import { formatarTelefone } from "@/lib/formatar";
+import { getClientes } from "@/services/clientes.service";
+import type { Cliente } from "@/types/client";
 
-import { ClienteForm } from "@/components/clientes/ClienteForm";
+/** Minúsculas e sem acentos, para a busca. */
+function normalizar(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
 
-import {
-  createCliente,
-  getClientes,
-} from "@/services/clientes.service";
-
-import {
-  Cliente,
-  CreateClienteDTO,
-} from "@/types/client";
+type Estado = "carregando" | "erro" | "pronto";
 
 export default function ClientesPage() {
-  const [clientes, setClientes] =
-    useState<Cliente[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [showForm, setShowForm] =
-    useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [estado, setEstado] = useState<Estado>("carregando");
+  const [tentativa, setTentativa] = useState(0);
+  const [busca, setBusca] = useState("");
 
   useEffect(() => {
-    loadClientes();
-  }, []);
+    let ativo = true;
 
-  async function loadClientes() {
-    try {
-      const data =
-        await getClientes();
+    getClientes()
+      .then((lista) => {
+        if (!ativo) return;
+        setClientes(lista);
+        setEstado("pronto");
+      })
+      .catch(() => {
+        /* Mensagem técnica não vai para a tela. */
+        if (ativo) setEstado("erro");
+      });
 
-      setClientes(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    return () => {
+      ativo = false;
+    };
+  }, [tentativa]);
+
+  function tentarDeNovo() {
+    setEstado("carregando");
+    setTentativa((n) => n + 1);
   }
 
-  async function handleCreateCliente(
-    data: CreateClienteDTO
-  ) {
-    try {
-      const novoCliente =
-        await createCliente(data);
+  const ordenados = useMemo(
+    () =>
+      [...clientes].sort((a, b) =>
+        a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+      ),
+    [clientes]
+  );
 
-      setClientes((prev) => [
-        novoCliente,
-        ...prev,
-      ]);
+  const termo = normalizar(busca.trim());
+  const termoDigitos = busca.replace(/\D/g, "");
 
-      setShowForm(false);
-    } catch (error) {
-      console.error(error);
+  const filtrados = termo
+    ? ordenados.filter((c) => {
+        const texto = normalizar(
+          [c.nome, c.email ?? "", c.telefone ?? "", formatarTelefone(c.telefone ?? "")].join(" ")
+        );
+        const digitos = (c.telefone ?? "").replace(/\D/g, "");
 
-      alert(
-        "Erro ao cadastrar cliente"
-      );
-    }
-  }
+        return (
+          texto.includes(termo) ||
+          (termoDigitos.length > 0 && digitos.includes(termoDigitos))
+        );
+      })
+    : ordenados;
 
   return (
-    <div className="p-8">
-      <div
-        className="
-          mb-8
-          flex
-          items-center
-          justify-between
-        "
-      >
- <PageHeader
-  title="Clientes"
-  subtitle="Gestão estratégica de clientes 👥"
-/>
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+      <CabecalhoPagina
+        titulo="Clientes"
+        subtitulo="As pessoas que compram de você"
+        acao={
+          <LinkBotao href="/clientes/novo" icone="mais">
+            Novo cliente
+          </LinkBotao>
+        }
+      />
 
-        <button
-          onClick={() =>
-            setShowForm(!showForm)
+      {estado === "carregando" && <Loading texto="Carregando clientes..." />}
+
+      {estado === "erro" && <ErrorState aoTentarDeNovo={tentarDeNovo} />}
+
+      {estado === "pronto" && clientes.length === 0 && (
+        <EmptyState
+          icone="conversa"
+          titulo="Você ainda não cadastrou clientes"
+          texto="Cadastre as pessoas que compram de você para acompanhar os pedidos de cada uma."
+          acao={
+            <LinkBotao href="/clientes/novo" icone="mais">
+              Cadastrar o primeiro cliente
+            </LinkBotao>
           }
-          className="
-            inline-flex
-            items-center
-            justify-center
-
-            bg-[#0B1739]
-            hover:bg-[#152250]
-
-            transition-all
-
-            text-white
-            font-semibold
-
-            px-6
-            py-3
-
-            rounded-xl
-
-            shadow-md
-          "
-        >
-          {showForm
-            ? "Fechar"
-            : "+ Novo Cliente"}
-        </button>
-      </div>
-
-      {showForm && (
-        <div
-          className="
-            bg-white
-            rounded-[32px]
-            shadow-sm
-            border
-            border-slate-200
-
-            p-8
-            mb-8
-          "
-        >
-          <h2
-            className="
-              text-3xl
-              font-bold
-              text-slate-900
-              mb-6
-            "
-          >
-            Cadastrar Cliente
-          </h2>
-
-          <ClienteForm
-            onSubmit={
-              handleCreateCliente
-            }
-          />
-        </div>
+        />
       )}
 
-      <div
-        className="
-          bg-white
-          rounded-[32px]
-          shadow-sm
-          border
-          border-slate-200
-          overflow-hidden
-        "
-      >
-        {loading ? (
-          <div className="p-12">
-            <p
-              className="
-                text-slate-500
-                text-xl
-              "
-            >
-              Carregando clientes...
-            </p>
+      {estado === "pronto" && clientes.length > 0 && (
+        <>
+          <div className="mb-6 max-w-xl">
+            <TextField
+              rotulo="Buscar cliente"
+              tipo="search"
+              valor={busca}
+              aoMudar={setBusca}
+              dica="Nome, telefone ou e-mail"
+            />
           </div>
-        ) : clientes.length === 0 ? (
-          <div
-            className="
-              flex
-              flex-col
-              items-center
-              justify-center
 
-              py-24
-            "
-          >
-            <h2
-              className="
-                text-3xl
-                font-bold
-                text-slate-800
-              "
-            >
-              Nenhum cliente cadastrado
-            </h2>
-
-            <p
-              className="
-                text-slate-500
-                text-xl
-                mt-3
-              "
-            >
-              Comece cadastrando seu primeiro cliente.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr
-                  className="
-                    border-b
-                    border-slate-200
-                  "
-                >
-                  <th
-                    className="
-                      text-left
-                      p-6
-                      text-slate-500
-                      text-xl
-                    "
-                  >
-                    Nome
-                  </th>
-
-                  <th
-                    className="
-                      text-left
-                      p-6
-                      text-slate-500
-                      text-xl
-                    "
-                  >
-                    Email
-                  </th>
-
-                  <th
-                    className="
-                      text-left
-                      p-6
-                      text-slate-500
-                      text-xl
-                    "
-                  >
-                    Telefone
-                  </th>
-
-                  <th
-                    className="
-                      text-left
-                      p-6
-                      text-slate-500
-                      text-xl
-                    "
-                  >
-                    Tipo
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {clientes.map((cliente) => (
-                  <tr
-                    key={cliente.id}
-                    className="
-                      border-b
-                      border-slate-100
-                    "
-                  >
-                    <td
-                      className="
-                        p-6
-                        text-slate-900
-                        font-semibold
-                        text-xl
-                      "
+          {filtrados.length === 0 ? (
+            <div className="flex flex-col items-start gap-3 rounded-3xl border border-borda bg-cartao p-5 text-lg">
+              <p>Nenhum cliente encontrado para &lsquo;{busca.trim()}&rsquo;.</p>
+              <Button variante="discreto" onClick={() => setBusca("")}>
+                Limpar busca
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Celular: cartões clicáveis */}
+              <ul className="flex flex-col gap-3 md:hidden">
+                {filtrados.map((cliente) => (
+                  <li key={cliente.id}>
+                    <Link
+                      href={`/clientes/${cliente.id}`}
+                      className="flex min-h-[88px] items-center gap-3 rounded-3xl border border-borda bg-cartao p-4 text-texto hover:bg-destaque-suave focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-destaque"
                     >
-                      {cliente.nome}
-                    </td>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xl font-bold">{cliente.nome}</span>
+                          <Badge>{rotuloTipoCliente(cliente.tipo_cliente)}</Badge>
+                        </div>
 
-                    <td
-                      className="
-                        p-6
-                        text-slate-600
-                        text-lg
-                      "
-                    >
-                      {cliente.email || "-"}
-                    </td>
+                        {cliente.telefone && (
+                          <p className="mt-1 text-lg text-texto-suave">
+                            {formatarTelefone(cliente.telefone)}
+                          </p>
+                        )}
 
-                    <td
-                      className="
-                        p-6
-                        text-slate-600
-                        text-lg
-                      "
-                    >
-                      {cliente.telefone || "-"}
-                    </td>
+                        {cliente.email && (
+                          <p className="break-words text-base text-texto-suave">
+                            {cliente.email}
+                          </p>
+                        )}
+                      </div>
 
-                    <td className="p-6">
-                      <span
-                        className="
-                          bg-emerald-100
-                          text-emerald-700
-
-                          px-4
-                          py-2
-
-                          rounded-full
-
-                          text-sm
-                          font-semibold
-                        "
-                      >
-                        {cliente.tipo_cliente}
-                      </span>
-                    </td>
-
-                    <th>
-  Ações
-</th>
-
-<td>
-  <a
-    href={`/clientes/${cliente.id}`}
-    className="
-      rounded-xl
-      bg-blue-600
-      px-4
-      py-2
-      text-white
-    "
-  >
-    Ver
-  </a>
-</td>
-                  </tr>
+                      <Icone nome="avancar" className="text-destaque" />
+                    </Link>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </ul>
+
+              {/* Computador: tabela */}
+              <div className="hidden overflow-hidden rounded-3xl border border-borda bg-cartao md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-lg">
+                    <thead>
+                      <tr className="border-b border-borda text-base text-texto-suave">
+                        <th scope="col" className="px-5 py-4 font-bold">Nome</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Telefone</th>
+                        <th scope="col" className="px-5 py-4 font-bold">E-mail</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Tipo</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Ações</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {filtrados.map((cliente) => (
+                        <tr key={cliente.id} className="border-b border-borda last:border-b-0">
+                          <td className="px-5 py-3 font-bold">{cliente.nome}</td>
+                          <td className="whitespace-nowrap px-5 py-3">
+                            {cliente.telefone ? formatarTelefone(cliente.telefone) : "—"}
+                          </td>
+                          <td className="px-5 py-3 break-all">{cliente.email || "—"}</td>
+                          <td className="px-5 py-3">
+                            <Badge>{rotuloTipoCliente(cliente.tipo_cliente)}</Badge>
+                          </td>
+                          <td className="px-5 py-3">
+                            <LinkBotao
+                              href={`/clientes/${cliente.id}`}
+                              variante="secundario"
+                              aria-label={`Ver ${cliente.nome}`}
+                            >
+                              Ver
+                            </LinkBotao>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

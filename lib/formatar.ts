@@ -26,6 +26,27 @@ export function formatarNumero(
 }
 
 /**
+ * Telefone brasileiro a partir dos dígitos:
+ * 11 dígitos → "(41) 99228-8256"; 10 dígitos → "(41) 9922-8256".
+ * Outros tamanhos devolvem o texto original; vazio devolve "".
+ */
+export function formatarTelefone(texto: string): string {
+  if (texto.trim() === "") return "";
+
+  const d = texto.replace(/\D/g, "");
+
+  if (d.length === 11) {
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  }
+
+  if (d.length === 10) {
+    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  }
+
+  return texto;
+}
+
+/**
  * Lê um número digitado pela usuária.
  * Aceita "12,50", "1.234,50", "12.5", "1.234" e "1.234.567".
  * Com vírgula, os pontos são separadores de milhar.
