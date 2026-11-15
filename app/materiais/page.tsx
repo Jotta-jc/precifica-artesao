@@ -88,15 +88,6 @@ export default function MateriaisPage() {
     ),
 
   preco: Number(preco),
-
-  estoque: Number(
-  quantidadeComprada
-),
-
-  estoque_atual:
-    Number(
-      quantidadeComprada
-    ),
 })
         .eq("id", editingMaterialId);
 
