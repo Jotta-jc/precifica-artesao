@@ -178,7 +178,9 @@ useEffect(() => {
       console.log(error);
 
       alert(
-        "Erro ao excluir produto"
+        error.code === "23503"
+          ? "Este produto já aparece em pedidos e não pode ser excluído. Assim o histórico de vendas fica preservado."
+          : "Não foi possível excluir agora. Tente novamente em instantes."
       );
 
       return;

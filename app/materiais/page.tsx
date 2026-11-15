@@ -171,7 +171,11 @@ export default function MateriaisPage() {
     if (error) {
       console.log(error);
 
-      alert(error.message);
+      alert(
+        error.code === "23503"
+          ? "Este material já tem movimentações de estoque ou faz parte da ficha técnica de um produto e não pode ser excluído."
+          : "Não foi possível excluir agora. Tente novamente em instantes."
+      );
 
       return;
     }

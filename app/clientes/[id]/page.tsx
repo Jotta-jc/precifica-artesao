@@ -105,7 +105,9 @@ async function excluirCliente() {
     console.error("Erro ao excluir cliente:", error);
 
     alert(
-      "Não foi possível excluir o cliente."
+      error.code === "23503"
+        ? "Este cliente tem pedidos registrados e não pode ser excluído. Assim o histórico de vendas fica preservado."
+        : "Não foi possível excluir agora. Tente novamente em instantes."
     );
 
     setLoading(false);
