@@ -109,7 +109,7 @@ Fatos importantes:
 
 ## 5. Banco de dados (auditado em 14/11/2026)
 
-**Sempre confira o schema real antes de escrever consultas.** Ainda não há migrations versionadas: o schema só existe no painel do Supabase.
+**Sempre confira o schema real antes de escrever consultas.** A referência do schema (14/11/2026) está em `supabase/migrations/20261114000000_baseline_referencia.sql`. As migrations posteriores, na mesma pasta, mostram o que mudou desde então.
 
 ### Segurança
 
@@ -146,13 +146,22 @@ alter table public.nome_tabela enable row level security;
 
 `material_units`, `material_brands`, `material_colors`, `material_subcategories` (modelo completo de materiais, com unidade de compra × consumo), `artisan_profile`, `profiles` (preenchida pela função `handle_new_user` no cadastro), `product_pricing` (colunas repetidas em inglês e português) e `test`.
 
-### Atenção: exclusões em cascata
+### Exclusões bloqueadas (migration de 14/11/2026)
 
-- Apagar um **cliente** apaga todos os **pedidos** dele.
-- Apagar um **produto** apaga os **itens de pedidos** que o contêm.
-- Apagar um **material** apaga suas linhas de ficha técnica e o histórico de estoque.
+O banco recusa (`on delete restrict`, erro `23503`) a exclusão de:
 
-Não crie fluxos de exclusão novos sem considerar isso.
+- **cliente** que tem pedidos;
+- **produto** que aparece em itens de pedido;
+- **material** com movimentações de estoque ou usado em ficha técnica.
+
+As telas de clientes, produtos e materiais tratam o código `23503` com mensagem clara em português. Continuam em cascata, de propósito: excluir um **pedido** apaga seus itens, e excluir um **produto sem vendas** apaga sua ficha técnica. A opção "Arquivar" ainda não existe.
+
+### Migrations
+
+- A pasta `supabase/migrations/` guarda as mudanças do banco, em ordem de data.
+- O arquivo `20261114000000_baseline_referencia.sql` é só uma fotografia do banco: **nunca o execute**.
+- Fluxo de toda mudança no banco: o Claude Code escreve a migration → o arquiteto revisa → o Juarez executa no SQL Editor → teste → commit.
+- O Claude Code **nunca** executa migrations nem acessa o banco.
 
 ---
 
@@ -206,7 +215,7 @@ O plano completo (Roadmap) é mantido pelo arquiteto. Resumo das fases:
 8. Pronto para vender (login por e-mail, LGPD, domínio, piloto, cobrança)
 9. IA (opcional)
 
-Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque.
+Já concluído: auditoria de código e banco; correção da edição de material que sobrescrevia o estoque; referência do schema versionada; bloqueio das exclusões em cascata.
 
 Não desenvolva funcionalidades que dependam de decisões ainda não tomadas.
 
