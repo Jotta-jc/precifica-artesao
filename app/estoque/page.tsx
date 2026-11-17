@@ -1,487 +1,181 @@
 "use client";
 
-import { formatarMoeda, formatarCustoUnitario } from "@/lib/formatar";
+import { useEffect, useState } from "react";
 
-import { useState } from "react";
-import { useEffect } from "react";
+import { SelectField } from "@/components/forms/SelectField";
+import { Badge } from "@/components/ui/Badge";
+import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
+import { Cartao } from "@/components/ui/Cartao";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { LinkBotao } from "@/components/ui/LinkBotao";
+import { Loading } from "@/components/ui/Loading";
+import { rotuloTipoMovimento, varianteTipoMovimento } from "@/lib/estoque";
+import { formatarData, formatarMoeda } from "@/lib/formatar";
+import { formatarQuantidadeComUnidade } from "@/lib/materiais";
+import { listarMovimentos, type Movimento } from "@/services/estoque.service";
+import { getMateriais, type Material } from "@/services/materiais.service";
 
-import { createClient } from "@/lib/supabase/client";
-export default function EstoquePage() {
-    const supabase = createClient();
-    const [materials, setMaterials] =
-  useState<any[]>([]);
+type Estado = "carregando" | "erro" | "pronto";
 
-const [
-  movements,
-  setMovements,
-] = useState<any[]>([]);
-
-  const [
-  selectedMaterialId,
-  setSelectedMaterialId,
-] = useState("");
-
-const [quantidade, setQuantidade] =
-  useState("");
-
-  const [valorPago, setValorPago] =
-  useState("");
-
-  const [observacao, setObservacao] =
-  useState("");
-
-  const selectedMaterial =
-  materials.find(
-    (material) =>
-      String(material.id) ===
-      selectedMaterialId
+/** "+450 metros" (entrou) ou "−20 gramas" (saiu). */
+function quantidadeComSinal(m: Movimento) {
+  const quantidade = Number(m.quantidade || 0);
+  const entrou = m.tipo === "entrada" || (m.tipo === "ajuste" && quantidade > 0);
+  const texto = formatarQuantidadeComUnidade(
+    Math.abs(quantidade),
+    m.materials?.unidade_uso
   );
+  return `${entrou ? "+" : "−"}${texto}`;
+}
 
-  const custoUnitario =
-  Number(valorPago || 0) /
-  Number(quantidade || 1);
+export default function EstoquePage() {
+  const [materiais, setMateriais] = useState<Material[]>([]);
+  const [movimentos, setMovimentos] = useState<Movimento[]>([]);
+  const [estado, setEstado] = useState<Estado>("carregando");
+  const [tentativa, setTentativa] = useState(0);
+  const [filtro, setFiltro] = useState("");
 
-async function registrarEntrada() {
-  if (!selectedMaterialId) {
-    alert("Selecione um material");
-    return;
-  }
+  useEffect(() => {
+    let ativo = true;
 
-  if (
-    Number(quantidade) <= 0
-  ) {
-    alert("Informe a quantidade");
-    return;
-  }
-
-  if (
-    Number(valorPago) <= 0
-  ) {
-    alert("Informe o valor pago");
-    return;
-  }
-
-  const material =
-    materials.find(
-      (item) =>
-        String(item.id) ===
-        selectedMaterialId
-    );
-
-  if (!material) return;
-
-  const {
-    data: { user },
-  } =
-    await supabase.auth.getUser();
-
-  if (!user) return;
-
-  const { error: movementError } =
-    await supabase
-      .from(
-        "material_movements"
-      )
-      .insert({
-        material_id:
-          material.id,
-
-        user_id:
-          user.id,
-
-        tipo: "entrada",
-
-        quantidade:
-          Number(
-            quantidade
-          ),
-
-        valor_total:
-          Number(
-            valorPago
-          ),
-
-        valor_unitario:
-          custoUnitario,
-
-observacao:
-  observacao ||
-  "Entrada manual",
+    Promise.all([getMateriais(), listarMovimentos(filtro ? Number(filtro) : undefined)])
+      .then(([listaMateriais, listaMovimentos]) => {
+        if (!ativo) return;
+        setMateriais(listaMateriais);
+        setMovimentos(listaMovimentos);
+        setEstado("pronto");
+      })
+      .catch(() => {
+        /* Mensagem técnica não vai para a tela. */
+        if (ativo) setEstado("erro");
       });
 
-  if (movementError) {
-    console.log(
-      movementError
-    );
+    return () => {
+      ativo = false;
+    };
+  }, [filtro, tentativa]);
 
-    alert(
-      "Erro ao registrar movimentação"
-    );
-
-    return;
+  function trocarFiltro(valor: string) {
+    setEstado("carregando");
+    setFiltro(valor);
   }
 
-  const novoEstoque =
-    Number(
-      material.estoque_atual || 0
-    ) +
-    Number(quantidade);
-
-  const {
-    error: materialError,
-  } = await supabase
-    .from("materials")
-    .update({
-      estoque_atual:
-        novoEstoque,
-
-      custo_unitario:
-        custoUnitario,
-    })
-    .eq(
-      "id",
-      material.id
-    );
-
-  if (materialError) {
-    console.log(
-      materialError
-    );
-
-    alert(
-      "Erro ao atualizar estoque"
-    );
-
-    return;
+  function tentarDeNovo() {
+    setEstado("carregando");
+    setTentativa((n) => n + 1);
   }
 
-  alert(
-    "Entrada registrada com sucesso"
-  );
+  const opcoesMaterial = [...materiais]
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }))
+    .map((m) => ({ valor: String(m.id), rotulo: m.nome }));
 
-  setQuantidade("");
-setObservacao("");
-  setSelectedMaterialId("");
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+      <CabecalhoPagina
+        titulo="Estoque"
+        subtitulo="Compras, usos e correções dos seus materiais"
+      />
 
-  carregarMateriais();
-}
-
-async function carregarMateriais() {
-  const { data, error } =
-    await supabase
-      .from("materials")
-      .select("*")
-      .order("nome");
-
-  if (error) {
-    console.log(error);
-
-    alert(
-      "Erro ao carregar materiais"
-    );
-
-    return;
-  }
-
-  setMaterials(data || []);
-}
-
-async function carregarMovimentacoes() {
-  const { data, error } =
-    await supabase
-      .from(
-        "material_movements"
-      )
-      .select(`
-        *,
-        materials (
-          nome
-        )
-      `)
-      .order(
-        "created_at",
-        {
-          ascending: false,
-        }
-      );
-
-  if (error) {
-    console.log(error);
-
-    return;
-  }
-
-  setMovements(
-    data || []
-  );
-}
-
-useEffect(() => {
-  carregarMateriais();
-
-  carregarMovimentacoes();
-}, []);
-
-console.log(
-  "MATERIAIS",
-  materials
-);
-
-console.log(
-  "MOVIMENTOS",
-  movements
-);
-
-return (
-    <main className="p-8">
-      <div className="mb-8">
-        <h1 className="text-5xl font-black text-slate-900">
-          Estoque
-        </h1>
-
-        <p className="mt-3 text-xl text-slate-500">
-          Entrada e movimentação de materiais
-        </p>
+      <div className="mb-8 grid gap-3 sm:grid-cols-3">
+        <LinkBotao href="/estoque/novo?tipo=entrada" icone="compra" larguraTotal className="min-h-14">
+          Registrar compra
+        </LinkBotao>
+        <LinkBotao href="/estoque/novo?tipo=saida" icone="materiais" larguraTotal className="min-h-14">
+          Registrar uso
+        </LinkBotao>
+        <LinkBotao
+          href="/estoque/novo?tipo=ajuste"
+          variante="secundario"
+          icone="editar"
+          larguraTotal
+          className="min-h-14"
+        >
+          Corrigir contagem
+        </LinkBotao>
       </div>
 
-<div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-  <h2 className="text-2xl font-bold text-slate-900">
-    Registrar Entrada
-  </h2>
+      <Cartao titulo="Últimos movimentos">
+        <div className="mb-6 max-w-md">
+          <SelectField
+            rotulo="Material"
+            valor={filtro}
+            aoMudar={trocarFiltro}
+            opcoes={opcoesMaterial}
+            textoVazio="Todos"
+          />
+        </div>
 
-  <p className="mt-2 text-slate-500">
-    Adicione novas compras ao estoque
-  </p>
+        {estado === "carregando" && <Loading texto="Carregando movimentos..." />}
 
-  <div className="mt-8">
-    <label className="mb-2 block text-sm font-semibold text-slate-500">
-      Material
-    </label>
+        {estado === "erro" && <ErrorState aoTentarDeNovo={tentarDeNovo} />}
 
-    <select
-      value={selectedMaterialId}
-      onChange={(e) =>
-        setSelectedMaterialId(
-          e.target.value
-        )
-      }
-      className="
-        w-full
-        rounded-2xl
-        border
-        border-slate-300
-        p-4
-      "
-    >
-      <option value="">
-        Selecione um material
-      </option>
-
-      {materials.map(
-        (material) => (
-          <option
-            key={material.id}
-            value={material.id}
-          >
-            {material.nome}
-          </option>
-        )
-      )}
-    </select>
-
-    <div className="mt-6">
-<label className="mb-2 block text-sm font-semibold text-slate-500">
-  Quantidade Comprada
-
-  {selectedMaterial && (
-    <span className="ml-2 text-green-600">
-      ({selectedMaterial.unidade})
-    </span>
-  )}
-</label>
-
-  <input
-    type="number"
-    value={quantidade}
-    onChange={(e) =>
-      setQuantidade(
-        e.target.value
-      )
-    }
-    placeholder="Ex: 500"
-    className="
-      w-full
-      rounded-2xl
-      border
-      border-slate-300
-      p-4
-    "
-  />
-</div>
-
-<div className="mt-6">
-  <label className="mb-2 block text-sm font-semibold text-slate-500">
-    Valor Pago
-  </label>
-
-  <input
-    type="number"
-    step="0.01"
-    value={valorPago}
-    onChange={(e) =>
-      setValorPago(
-        e.target.value
-      )
-    }
-    placeholder="Ex: 55.00"
-    className="
-      w-full
-      rounded-2xl
-      border
-      border-slate-300
-      p-4
-    "
-  />
-</div>
-
-<div className="mt-6 rounded-2xl bg-green-50 p-4 border border-green-200">
-  <p className="text-sm text-green-700">
-    Custo Unitário Calculado
-  </p>
-
-  <h3 className="mt-2 text-2xl font-bold text-green-900">
-    {formatarCustoUnitario(custoUnitario)}
-  </h3>
-</div>
-<div className="mt-6">
-  <label className="mb-2 block text-sm font-semibold text-slate-500">
-    Observação
-  </label>
-
-  <input
-    type="text"
-    value={observacao}
-    onChange={(e) =>
-      setObservacao(
-        e.target.value
-      )
-    }
-    placeholder="Ex: Compra Shopee"
-    className="
-      w-full
-      rounded-2xl
-      border
-      border-slate-300
-      p-4
-    "
-  />
-</div>
-<button
-  onClick={
-    registrarEntrada
-  }
-  className="
-    mt-6
-    rounded-2xl
-    bg-green-600
-    px-6
-    py-4
-    font-bold
-    text-white
-    hover:bg-green-700
-  "
->
-  Registrar Entrada
-</button>
-
-  </div>
-</div>
-<div className="mt-8 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-  <h2 className="text-2xl font-bold text-slate-900">
-    Histórico de Movimentações
-  </h2>
-
-  <div className="mt-6 overflow-x-auto">
-    <table className="w-full">
-      <thead>
-        <tr className="border-b border-slate-200 text-left">
-          <th className="p-3">
-            Data
-          </th>
-
-          <th className="p-3">
-            Material
-          </th>
-
-          <th className="p-3">
-            Tipo
-          </th>
-
-          <th className="p-3">
-            Quantidade
-          </th>
-
-          <th className="p-3">
-            Valor
-          </th>
-<th className="p-3">
-  Observação
-</th>
-
-        </tr>
-      </thead>
-
-      <tbody>
-        {movements.map(
-          (movement) => (
-            <tr
-              key={movement.id}
-              className="border-b border-slate-100"
-            >
-              <td className="p-3">
-                {new Date(
-                  movement.created_at
-                ).toLocaleDateString(
-                  "pt-BR"
-                )}
-              </td>
-
-              <td className="p-3">
-                {
-                  movement
-                    .materials
-                    ?.nome
-                }
-              </td>
-
-              <td className="p-3">
-                {movement.tipo}
-              </td>
-
-              <td className="p-3">
-                {
-                  movement.quantidade
-                }
-              </td>
-
-              <td className="p-3">
-                {formatarMoeda(
-                  Number(
-                    movement.valor_total ||
-                      0
-                  )
-                )}
-              </td>
-              <td className="p-3">
-  {movement.observacao}
-</td>
-            </tr>
-          )
+        {estado === "pronto" && movimentos.length === 0 && (
+          <EmptyState
+            icone="compra"
+            titulo="Nenhum movimento ainda"
+            texto="Registre uma compra, um uso ou uma correção de contagem para ver o histórico aqui."
+          />
         )}
-      </tbody>
-    </table>
-  </div>
-</div>
-    </main>
+
+        {estado === "pronto" && movimentos.length > 0 && (
+          <>
+            {/* Celular: um cartão por movimento */}
+            <ul className="flex flex-col gap-3 md:hidden">
+              {movimentos.map((m) => (
+                <li key={m.id} className="rounded-2xl border border-borda p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-lg font-bold">{m.materials?.nome ?? "Material"}</span>
+                    <Badge variante={varianteTipoMovimento(m.tipo)}>
+                      {rotuloTipoMovimento(m.tipo)}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-base text-texto-suave">{formatarData(m.created_at)}</p>
+                  <p className="mt-1 text-lg font-bold">{quantidadeComSinal(m)}</p>
+                  <p className="text-lg">{formatarMoeda(Number(m.valor_total ?? 0))}</p>
+                  {m.observacao && (
+                    <p className="mt-1 text-base text-texto-suave">{m.observacao}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            {/* Computador: tabela */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left text-lg">
+                <thead>
+                  <tr className="border-b border-borda text-base text-texto-suave">
+                    <th scope="col" className="px-4 py-3 font-bold">Data</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Material</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Tipo</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Quantidade</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Valor</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Observação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movimentos.map((m) => (
+                    <tr key={m.id} className="border-b border-borda last:border-b-0">
+                      <td className="whitespace-nowrap px-4 py-3">{formatarData(m.created_at)}</td>
+                      <td className="px-4 py-3 font-bold">{m.materials?.nome ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <Badge variante={varianteTipoMovimento(m.tipo)}>
+                          {rotuloTipoMovimento(m.tipo)}
+                        </Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">{quantidadeComSinal(m)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {formatarMoeda(Number(m.valor_total ?? 0))}
+                      </td>
+                      <td className="px-4 py-3 text-texto-suave">{m.observacao || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </Cartao>
+    </div>
   );
 }
