@@ -1,339 +1,399 @@
 "use client";
 
-import Card from "@/components/ui/Card";
-
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/client";
+import { useAvisos } from "@/components/ui/Avisos";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
+import { Cartao } from "@/components/ui/Cartao";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Icone } from "@/components/ui/Icone";
+import { LinkBotao } from "@/components/ui/LinkBotao";
+import { Loading } from "@/components/ui/Loading";
+import { rotuloTipoCliente } from "@/lib/clientes";
+import {
+  formatarData,
+  formatarMoeda,
+  formatarTelefone,
+} from "@/lib/formatar";
+import {
+  rotuloStatusPedido,
+  varianteStatusPedido,
+} from "@/lib/pedidos";
+import {
+  codigoDoErro,
+  deleteCliente,
+  getClienteById,
+  getPedidosDoCliente,
+  type PedidoDoCliente,
+} from "@/services/clientes.service";
+import type { Cliente } from "@/types/client";
 
-import StatCard from "@/components/ui/StatCard";
+type Estado = "carregando" | "naoEncontrado" | "erro" | "pronto";
+
+/** Dígitos com o código do Brasil (55), sem repetir se já tiver. */
+function telefoneComPais(telefone: string) {
+  const d = telefone.replace(/\D/g, "");
+  const jaTem55 = d.startsWith("55") && (d.length === 12 || d.length === 13);
+  return jaTem55 ? d : `55${d}`;
+}
 
 export default function ClienteDetalhePage() {
   const params = useParams();
+  const id = String(params.id);
+  const router = useRouter();
+  const { avisar } = useAvisos();
 
-  const supabase = createClient();
+  const [estado, setEstado] = useState<Estado>("carregando");
+  const [tentativa, setTentativa] = useState(0);
+  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [pedidos, setPedidos] = useState<PedidoDoCliente[]>([]);
 
-  const [cliente, setCliente] =
-    useState<any>(null);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [pedidos, setPedidos] =
-    useState<any[]>([]);
-
-  const totalPedidos =
-    pedidos.length;
-
-  const totalVendido =
-    pedidos.reduce(
-      (acc, pedido) =>
-        acc +
-        Number(
-          pedido.valor_total || 0
-        ),
-      0
-    );
-
-  const ticketMedio =
-    totalPedidos > 0
-      ? totalVendido /
-        totalPedidos
-      : 0;
-
-  async function carregarCliente() {
-    const { data, error } =
-      await supabase
-        .from("clientes")
-        .select("*")
-        .eq("id", params.id)
-        .single();
-
-if (error) {
-  console.error("ERRO CLIENTE:", {
-    message: error.message,
-    code: error.code,
-    details: error.details,
-    hint: error.hint,
-    id: params.id,
-  });
-
-  setLoading(false);
-  return;
-}
-    setCliente(data);
-
-    const {
-      data: pedidosData,
-    } = await supabase
-      .from("orders")
-      .select("*")
-      .eq(
-        "client_id",
-        params.id
-      )
-      .order(
-        "created_at",
-        {
-          ascending: false,
-        }
-      );
-
-    setPedidos(
-      pedidosData || []
-    );
-
-    setLoading(false);
-  }
-
-async function excluirCliente() {
-  const confirmar = window.confirm(
-    "Deseja realmente excluir este cliente?"
-  );
-
-  if (!confirmar) return;
-
-  setLoading(true);
-
-  const { error } = await supabase
-    .from("clientes")
-    .delete()
-    .eq("id", params.id);
-
-  if (error) {
-    console.error("Erro ao excluir cliente:", error);
-
-    alert(
-      error.code === "23503"
-        ? "Este cliente tem pedidos registrados e não pode ser excluído. Assim o histórico de vendas fica preservado."
-        : "Não foi possível excluir agora. Tente novamente em instantes."
-    );
-
-    setLoading(false);
-    return;
-  }
-
-  window.location.href = "/clientes";
-}
+  const [confirmarAberto, setConfirmarAberto] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
 
   useEffect(() => {
-    carregarCliente();
-  }, []);
+    let ativo = true;
 
-  if (loading) {
+    Promise.all([getClienteById(id), getPedidosDoCliente(id)])
+      .then(([encontrado, lista]) => {
+        if (!ativo) return;
+
+        if (!encontrado) {
+          setEstado("naoEncontrado");
+          return;
+        }
+
+        setCliente(encontrado);
+        setPedidos(lista);
+        setEstado("pronto");
+      })
+      .catch((erro) => {
+        if (!ativo) return;
+        /* 22P02: endereço com id inválido. */
+        setEstado(codigoDoErro(erro) === "22P02" ? "naoEncontrado" : "erro");
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [id, tentativa]);
+
+  function tentarDeNovo() {
+    setEstado("carregando");
+    setTentativa((n) => n + 1);
+  }
+
+  async function excluir() {
+    setExcluindo(true);
+
+    try {
+      await deleteCliente(id);
+
+      /* Fecha o diálogo antes do aviso (o diálogo cobre a tela). */
+      setConfirmarAberto(false);
+      avisar({ tipo: "sucesso", texto: "Cliente excluído." });
+      router.push("/clientes");
+    } catch (erro) {
+      setConfirmarAberto(false);
+      avisar({
+        tipo: "erro",
+        texto:
+          codigoDoErro(erro) === "23503"
+            ? "Este cliente tem pedidos registrados e não pode ser excluído. Assim o histórico de vendas fica preservado."
+            : "Não foi possível excluir agora. Tente de novo em instantes.",
+      });
+    } finally {
+      setExcluindo(false);
+    }
+  }
+
+  const voltar = (
+    <LinkBotao
+      href="/clientes"
+      variante="discreto"
+      icone="voltar"
+      className="mb-4 -ml-3"
+    >
+      Voltar para clientes
+    </LinkBotao>
+  );
+
+  if (estado !== "pronto" || !cliente) {
     return (
-      <main className="p-8">
-        Carregando...
-      </main>
+      <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
+        {voltar}
+
+        {estado === "carregando" && <Loading texto="Carregando cliente..." />}
+
+        {estado === "naoEncontrado" && (
+          <EmptyState
+            icone="conversa"
+            titulo="Cliente não encontrado"
+            texto="Ele pode ter sido excluído ou o endereço está incorreto."
+            acao={
+              <LinkBotao href="/clientes" icone="voltar">
+                Voltar para clientes
+              </LinkBotao>
+            }
+          />
+        )}
+
+        {estado === "erro" && <ErrorState aoTentarDeNovo={tentarDeNovo} />}
+      </div>
     );
   }
 
+  /* "Pedidos" conta todos. Os valores ignoram orçamentos e cancelados;
+     o valor médio divide só pelos pedidos que entraram na soma.
+     Valor vazio conta como zero. */
+  const quantidade = pedidos.length;
+  const pedidosVendidos = pedidos.filter(
+    (p) => p.status !== "cancelado" && p.status !== "orcamento"
+  );
+  const totalVendido = pedidosVendidos.reduce(
+    (soma, p) => soma + Number(p.valor_total || 0),
+    0
+  );
+  const valorMedio =
+    pedidosVendidos.length > 0 ? totalVendido / pedidosVendidos.length : 0;
+
+  const temPedidos = quantidade > 0;
+  const usuarioInstagram = (cliente.instagram ?? "").replace(/^@+/, "").trim();
+  const temContato = Boolean(
+    cliente.telefone || cliente.email || usuarioInstagram || cliente.observacoes
+  );
+
   return (
-    <main className="p-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
+      {voltar}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-5xl font-black">
-            {cliente.nome}
-          </h1>
+      <CabecalhoPagina
+        titulo={cliente.nome}
+        subtitulo={rotuloTipoCliente(cliente.tipo_cliente)}
+        acao={
+          <>
+            <LinkBotao
+              href={`/clientes/${id}/editar`}
+              variante="secundario"
+              icone="editar"
+            >
+              Editar
+            </LinkBotao>
+            <Button
+              variante="perigo"
+              icone="excluir"
+              disabled={temPedidos}
+              onClick={() => setConfirmarAberto(true)}
+            >
+              Excluir
+            </Button>
+          </>
+        }
+      />
 
-          <p className="mt-3 text-slate-500">
-            Detalhes do cliente
-          </p>
-        </div>
+      {temPedidos && (
+        <p className="-mt-2 mb-6 text-base text-texto-suave">
+          Clientes com pedidos não podem ser excluídos, para preservar o
+          histórico de vendas.
+        </p>
+      )}
 
-        <div className="flex gap-3">
-<button
-  onClick={() => {
-    window.location.href = `/clientes/${params.id}/editar`;
-  }}
-  className="
-    rounded-2xl
-    bg-amber-500
-    px-6
-    py-3
-    font-bold
-    text-white
-    transition
-    hover:bg-amber-600
-  "
->
-  Editar Cliente
-</button>
+      <div className="flex flex-col gap-6">
+        <Cartao titulo="Contato">
+          {!temContato ? (
+            <p className="text-lg text-texto-suave">Nenhum contato cadastrado.</p>
+          ) : (
+            <dl className="flex flex-col gap-5 text-lg">
+              {cliente.telefone && (
+                <div>
+                  <dt className="text-base font-bold text-texto-suave">
+                    Telefone ou WhatsApp
+                  </dt>
+                  <dd className="mt-1">
+                    <p className="text-xl font-bold">
+                      {formatarTelefone(cliente.telefone)}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <LinkBotao
+                        href={`tel:+${telefoneComPais(cliente.telefone)}`}
+                        variante="secundario"
+                        icone="telefone"
+                      >
+                        Ligar
+                      </LinkBotao>
+                      <LinkBotao
+                        href={`https://wa.me/${telefoneComPais(cliente.telefone)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variante="secundario"
+                        icone="conversa"
+                      >
+                        WhatsApp
+                      </LinkBotao>
+                    </div>
+                  </dd>
+                </div>
+              )}
 
-          <button
-            onClick={
-              excluirCliente
-            }
-            className="
-              rounded-2xl
-              bg-red-600
-              px-6
-              py-3
-              font-bold
-              text-white
-            "
-          >
-            Excluir Cliente
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-8 grid gap-6 md:grid-cols-3">
-           
-
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-  <StatCard
-    title="Total de Pedidos"
-    value={totalPedidos}
-    description="Pedidos realizados pelo cliente"
-  />
-
-  <StatCard
-    title="Total Vendido"
-    value={`R$ ${totalVendido.toFixed(2)}`}
-    description="Valor total dos pedidos"
-    color="green"
-  />
-
-  <StatCard
-    title="Ticket Médio"
-    value={`R$ ${ticketMedio.toFixed(2)}`}
-    description="Valor médio por pedido"
-    color="blue"
-  />
-</div>
-
-      </div>
-
-      <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
-        <h2 className="mb-6 text-2xl font-bold">
-          Informações do Cliente
-        </h2>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm text-slate-500">
-              Email
-            </p>
-
-            <p className="mt-2 font-semibold">
-              {cliente.email || "-"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm text-slate-500">
-              Telefone
-            </p>
-
-            <p className="mt-2 font-semibold">
-              {cliente.telefone || "-"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm text-slate-500">
-              Instagram
-            </p>
-
-            <p className="mt-2 font-semibold">
-              {cliente.instagram || "-"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm text-slate-500">
-              Tipo
-            </p>
-
-            <p className="mt-2 font-semibold">
-              {cliente.tipo_cliente || "-"}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 rounded-2xl bg-slate-50 p-4">
-          <p className="text-sm text-slate-500">
-            Observações
-          </p>
-
-          <p className="mt-2">
-            {cliente.observacoes ||
-              "Nenhuma observação cadastrada"}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
-        <h2 className="mb-4 text-xl font-bold">
-          Pedidos do Cliente
-        </h2>
-
-        <table className="w-full">
-          <thead>
-            <tr className="border-b">
-              <th className="p-3 text-left">
-                Pedido
-              </th>
-
-              <th className="p-3 text-left">
-                Status
-              </th>
-
-              <th className="p-3 text-left">
-                Valor
-              </th>
-
-              <th className="p-3 text-left">
-                Ações
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {pedidos.map(
-              (pedido: any) => (
-                <tr
-                  key={pedido.id}
-                  className="border-b"
-                >
-                  <td className="p-3">
-                    #{pedido.id}
-                  </td>
-
-                  <td className="p-3">
-                    {pedido.status}
-                  </td>
-
-                  <td className="p-3">
-                    R$ {Number(
-                      pedido.valor_total
-                    ).toFixed(2)}
-                  </td>
-
-                  <td className="p-3">
+              {cliente.email && (
+                <div>
+                  <dt className="text-base font-bold text-texto-suave">E-mail</dt>
+                  <dd className="mt-1 break-all">
                     <a
-                      href={`/pedidos/${pedido.id}`}
-                      className="
-                        rounded-xl
-                        bg-blue-600
-                        px-4
-                        py-2
-                        text-white
-                      "
+                      href={`mailto:${cliente.email}`}
+                      className="font-bold text-destaque underline underline-offset-4"
                     >
-                      Ver Pedido
+                      {cliente.email}
                     </a>
-                  </td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
+                  </dd>
+                </div>
+              )}
+
+              {usuarioInstagram && (
+                <div>
+                  <dt className="text-base font-bold text-texto-suave">Instagram</dt>
+                  <dd className="mt-1 break-all">
+                    <a
+                      href={`https://instagram.com/${encodeURIComponent(usuarioInstagram)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold text-destaque underline underline-offset-4"
+                    >
+                      @{usuarioInstagram}
+                    </a>
+                  </dd>
+                </div>
+              )}
+
+              {cliente.observacoes && (
+                <div>
+                  <dt className="text-base font-bold text-texto-suave">Observações</dt>
+                  <dd className="mt-1 whitespace-pre-line">{cliente.observacoes}</dd>
+                </div>
+              )}
+            </dl>
+          )}
+        </Cartao>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <Cartao>
+            <p className="text-base font-bold text-texto-suave">Pedidos</p>
+            <p className="mt-1 text-[28px] font-bold">{quantidade}</p>
+          </Cartao>
+          <Cartao>
+            <p className="text-base font-bold text-texto-suave">Total vendido</p>
+            <p className="mt-1 text-[28px] font-bold">{formatarMoeda(totalVendido)}</p>
+            <p className="mt-1 text-base text-texto-suave">
+              Não conta orçamentos nem pedidos cancelados.
+            </p>
+          </Cartao>
+          <Cartao>
+            <p className="text-base font-bold text-texto-suave">Valor médio por pedido</p>
+            <p className="mt-1 text-[28px] font-bold">{formatarMoeda(valorMedio)}</p>
+            <p className="mt-1 text-base text-texto-suave">
+              Não conta orçamentos nem pedidos cancelados.
+            </p>
+          </Cartao>
+        </div>
+
+        <Cartao titulo="Pedidos deste cliente">
+          {!temPedidos ? (
+            <p className="text-lg text-texto-suave">
+              Este cliente ainda não tem pedidos.
+            </p>
+          ) : (
+            <>
+              {/* Celular: um cartão por pedido */}
+              <ul className="flex flex-col gap-3 md:hidden">
+                {pedidos.map((pedido) => (
+                  <li key={pedido.id}>
+                    <Link
+                      href={`/pedidos/${pedido.id}`}
+                      className="flex min-h-[88px] items-center gap-3 rounded-2xl border border-borda p-4 text-texto hover:bg-destaque-suave focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-destaque"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-lg font-bold">Pedido nº {pedido.id}</span>
+                          <Badge variante={varianteStatusPedido(pedido.status)}>
+                            {rotuloStatusPedido(pedido.status)}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-base text-texto-suave">
+                          {formatarData(pedido.created_at)}
+                        </p>
+                        <p className="mt-1 text-lg font-bold">
+                          {formatarMoeda(Number(pedido.valor_total || 0))}
+                        </p>
+                      </div>
+                      <Icone nome="avancar" className="text-destaque" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Computador: tabela */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-left text-lg">
+                  <thead>
+                    <tr className="border-b border-borda text-base text-texto-suave">
+                      <th scope="col" className="px-4 py-3 font-bold">Pedido</th>
+                      <th scope="col" className="px-4 py-3 font-bold">Data</th>
+                      <th scope="col" className="px-4 py-3 font-bold">Situação</th>
+                      <th scope="col" className="px-4 py-3 font-bold">Valor</th>
+                      <th scope="col" className="px-4 py-3 font-bold">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pedidos.map((pedido) => (
+                      <tr key={pedido.id} className="border-b border-borda last:border-b-0">
+                        <td className="px-4 py-3 font-bold">nº {pedido.id}</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {formatarData(pedido.created_at)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variante={varianteStatusPedido(pedido.status)}>
+                            {rotuloStatusPedido(pedido.status)}
+                          </Badge>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {formatarMoeda(Number(pedido.valor_total || 0))}
+                        </td>
+                        <td className="px-4 py-3">
+                          <LinkBotao
+                            href={`/pedidos/${pedido.id}`}
+                            variante="secundario"
+                            aria-label={`Ver pedido nº ${pedido.id}`}
+                          >
+                            Ver pedido
+                          </LinkBotao>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </Cartao>
       </div>
 
-    </main>
+      <ConfirmDialog
+        aberto={confirmarAberto}
+        titulo="Excluir cliente?"
+        mensagem={`${cliente.nome} será excluído e não poderá ser recuperado.`}
+        textoConfirmar="Excluir cliente"
+        textoCancelar="Não excluir"
+        variante="perigo"
+        carregando={excluindo}
+        aoConfirmar={excluir}
+        aoCancelar={() => setConfirmarAberto(false)}
+      />
+    </div>
   );
 }

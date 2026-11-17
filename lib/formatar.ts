@@ -25,6 +25,28 @@ export function formatarNumero(
   }).format(Number.isFinite(valor) ? valor : 0);
 }
 
+const formatadorData = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+/**
+ * "08/10/2026" (só a data). Vazio ou inválido devolve "".
+ * Uma data sem hora ("2026-10-08") é lida no dia local, sem voltar um dia.
+ */
+export function formatarData(valor: string | null): string {
+  if (!valor) return "";
+
+  const soData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
+
+  const data = soData
+    ? new Date(Number(soData[1]), Number(soData[2]) - 1, Number(soData[3]))
+    : new Date(valor);
+
+  return Number.isNaN(data.getTime()) ? "" : formatadorData.format(data);
+}
+
 /**
  * Telefone brasileiro a partir dos dígitos:
  * 11 dígitos → "(41) 99228-8256"; 10 dígitos → "(41) 9922-8256".

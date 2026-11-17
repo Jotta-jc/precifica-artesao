@@ -1,203 +1,148 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
+import {
+  FormularioCliente,
+  type DadosCliente,
+} from "@/components/clientes/FormularioCliente";
+import { useAvisos } from "@/components/ui/Avisos";
+import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
+import { Cartao } from "@/components/ui/Cartao";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { LinkBotao } from "@/components/ui/LinkBotao";
+import { Loading } from "@/components/ui/Loading";
 import { createClient } from "@/lib/supabase/client";
+import {
+  codigoDoErro,
+  getClienteById,
+  updateCliente,
+} from "@/services/clientes.service";
+import type { Cliente } from "@/types/client";
+
+type Estado = "carregando" | "naoEncontrado" | "erro" | "pronto";
 
 export default function EditarClientePage() {
   const params = useParams();
+  const id = String(params.id);
   const router = useRouter();
+  const { avisar } = useAvisos();
 
-  const supabase = createClient();
-
-  const [loading, setLoading] = useState(true);
+  const [estado, setEstado] = useState<Estado>("carregando");
+  const [tentativa, setTentativa] = useState(0);
+  const [cliente, setCliente] = useState<Cliente | null>(null);
   const [salvando, setSalvando] = useState(false);
 
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [tipoCliente, setTipoCliente] = useState("");
-  const [observacoes, setObservacoes] = useState("");
-
   useEffect(() => {
-    async function carregarCliente() {
-      const { data, error } = await supabase
-        .from("clientes")
-        .select("*")
-        .eq("id", params.id)
-        .single();
+    let ativo = true;
 
-      if (error) {
-        console.error("Erro ao carregar cliente:", error);
-        setLoading(false);
+    getClienteById(id)
+      .then((encontrado) => {
+        if (!ativo) return;
+
+        if (!encontrado) {
+          setEstado("naoEncontrado");
+          return;
+        }
+
+        setCliente(encontrado);
+        setEstado("pronto");
+      })
+      .catch((erro) => {
+        if (!ativo) return;
+        /* 22P02: endereço com id inválido. */
+        setEstado(codigoDoErro(erro) === "22P02" ? "naoEncontrado" : "erro");
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [id, tentativa]);
+
+  function tentarDeNovo() {
+    setEstado("carregando");
+    setTentativa((n) => n + 1);
+  }
+
+  async function salvar(dados: DadosCliente) {
+    setSalvando(true);
+
+    try {
+      const {
+        data: { user },
+      } = await createClient().auth.getUser();
+
+      if (!user) {
+        avisar({
+          tipo: "erro",
+          texto: "Sua sessão expirou. Entre novamente para salvar.",
+        });
         return;
       }
 
-      setNome(data.nome || "");
-      setEmail(data.email || "");
-      setTelefone(data.telefone || "");
-      setInstagram(data.instagram || "");
-      setTipoCliente(data.tipo_cliente || "");
-      setObservacoes(data.observacoes || "");
+      /* Na edição, campo apagado vai como null e limpa o valor antigo. */
+      await updateCliente(id, dados);
 
-      setLoading(false);
-    }
-
-    carregarCliente();
-  }, [params.id]);
-
-  async function salvarCliente(e: React.FormEvent) {
-    e.preventDefault();
-
-    setSalvando(true);
-
-    const { error } = await supabase
-      .from("clientes")
-      .update({
-        nome,
-        email,
-        telefone,
-        instagram,
-        tipo_cliente: tipoCliente,
-        observacoes,
-      })
-      .eq("id", params.id);
-
-    if (error) {
-      console.error("Erro ao atualizar cliente:", error);
-
-      alert("Erro ao atualizar cliente.");
-
+      avisar({ tipo: "sucesso", texto: "Alterações salvas." });
+      router.push(`/clientes/${id}`);
+    } catch {
+      /* Mensagem técnica não vai para a tela. */
+      avisar({
+        tipo: "erro",
+        texto: "Não foi possível salvar agora. Tente de novo em instantes.",
+      });
+    } finally {
       setSalvando(false);
-      return;
     }
-
-    router.push(`/clientes/${params.id}`);
   }
 
-  if (loading) {
-    return (
-      <main className="p-8">
-        <p className="text-slate-500">
-          Carregando cliente...
-        </p>
-      </main>
-    );
-  }
+  const naoPronto = estado !== "pronto" || !cliente;
 
   return (
-    <main className="p-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-black text-slate-900">
-          Editar Cliente
-        </h1>
-
-        <p className="mt-2 text-slate-500">
-          Atualize as informações do cliente.
-        </p>
-      </div>
-
-      <form
-        onSubmit={salvarCliente}
-        className="max-w-4xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"
+    <div className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-10">
+      <LinkBotao
+        href={naoPronto ? "/clientes" : `/clientes/${id}`}
+        variante="discreto"
+        icone="voltar"
+        className="mb-4 -ml-3"
       >
-        <div className="grid gap-6 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Nome
-            </label>
+        {naoPronto ? "Voltar para clientes" : "Voltar para o cliente"}
+      </LinkBotao>
 
-            <input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              required
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+      {estado === "carregando" && <Loading texto="Carregando cliente..." />}
+
+      {estado === "naoEncontrado" && (
+        <EmptyState
+          icone="conversa"
+          titulo="Cliente não encontrado"
+          texto="Ele pode ter sido excluído ou o endereço está incorreto."
+          acao={
+            <LinkBotao href="/clientes" icone="voltar">
+              Voltar para clientes
+            </LinkBotao>
+          }
+        />
+      )}
+
+      {estado === "erro" && <ErrorState aoTentarDeNovo={tentarDeNovo} />}
+
+      {!naoPronto && cliente && (
+        <>
+          <CabecalhoPagina titulo="Editar cliente" subtitulo={cliente.nome} />
+
+          <Cartao>
+            <FormularioCliente
+              valoresIniciais={cliente}
+              textoSalvar="Salvar alterações"
+              salvando={salvando}
+              aoSalvar={salvar}
+              aoCancelar={() => router.push(`/clientes/${id}`)}
             />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Email
-            </label>
-
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Telefone
-            </label>
-
-            <input
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Instagram
-            </label>
-
-            <input
-              value={instagram}
-              onChange={(e) => setInstagram(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Tipo de Cliente
-            </label>
-
-            <input
-              value={tipoCliente}
-              onChange={(e) => setTipoCliente(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
-            Observações
-          </label>
-
-          <textarea
-            value={observacoes}
-            onChange={(e) => setObservacoes(e.target.value)}
-            rows={5}
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-          />
-        </div>
-
-        <div className="mt-8 flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="rounded-xl bg-slate-200 px-6 py-3 font-bold text-slate-700 transition hover:bg-slate-300"
-          >
-            Cancelar
-          </button>
-
-          <button
-            type="submit"
-            disabled={salvando}
-            className="rounded-xl bg-blue-600 px-6 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
-          >
-            {salvando ? "Salvando..." : "Salvar Alterações"}
-          </button>
-        </div>
-      </form>
-    </main>
+          </Cartao>
+        </>
+      )}
+    </div>
   );
 }
