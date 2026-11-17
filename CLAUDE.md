@@ -185,6 +185,7 @@ As telas de clientes, produtos e materiais tratam o código `23503` com mensagem
 - Margem e markup são diferentes. Margem é sobre o preço de venda; markup é sobre o custo.
 - "Configurações IA" e "Calculadora Inteligente" não usam IA. Não prometa IA na interface.
 - **Vitrine pública (Jornada 3):** o visitante (`anon`) continua SEM acesso às tabelas. A vitrine lerá apenas uma função ou view própria que entrega só os campos públicos (nome, descrição, foto, categoria, preço ou "sob consulta", prazo) dos produtos marcados como publicados, e os dados de contato do ateliê. Nunca expõe custo, margem, materiais, estoque, clientes ou pedidos. Essa exceção será desenhada e revisada em tarefa própria; não libere acesso de `anon` a tabelas para "resolver" a vitrine.
+- **Jornada 1 — Materiais (decidido em 17/11/2026):** categorias de material vêm da lista própria de cada artesã (tabela material_categories), com opção de criar novas; unidade de USO escolhida numa lista fixa (grama, quilo, metro, centímetro, mililitro, litro, unidade) e a artesã informa quanto vem em cada compra (ex.: rolo com 150 metros), e o sistema calcula o custo por unidade de uso; estoque mínimo com aviso "Acabando"; materiais com histórico podem ser arquivados. Marca, cor, subcategoria e código de barras ficam para depois.
 
 ---
 
