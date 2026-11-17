@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import PageHeader from "@/components/ui/PageHeader";
 
 import { useEffect, useState } from "react";
@@ -437,7 +439,7 @@ setNomeEmpresa(
           </p>
 
           <h3 className="text-4xl font-bold text-emerald-600">
-            R$ {valorHora.toFixed(2)}
+            {formatarMoeda(valorHora)}
           </h3>
         </div>
 

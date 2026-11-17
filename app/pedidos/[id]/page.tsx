@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import { useEffect, useState } from "react";
 
 import { useParams } from "next/navigation";
@@ -371,9 +373,9 @@ if (loading) {
     </h2>
 
     <p className="text-2xl font-bold text-green-600">
-      R$ {Number(
-        pedido.valor_total
-      ).toFixed(2)}
+      {formatarMoeda(
+        Number(pedido.valor_total)
+      )}
     </p>
   </div>
 </div>
@@ -477,9 +479,9 @@ if (loading) {
             </td>
 
             <td className="p-3">
-              R$ {Number(
-                item.valor_total
-              ).toFixed(2)}
+              {formatarMoeda(
+                Number(item.valor_total)
+              )}
             </td>
           </tr>
         )

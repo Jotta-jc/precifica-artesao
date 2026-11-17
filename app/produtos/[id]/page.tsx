@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import {
   useEffect,
   useMemo,
@@ -809,18 +811,18 @@ const custoTotal =
 
   <InfoItem
     label="Mão de Obra"
-    value={`R$ ${maoDeObra.toFixed(2)}`}
+    value={formatarMoeda(maoDeObra)}
     highlight
   />
 
   <InfoItem
     label="Lucro Premium"
-    value={`R$ ${premiumProfit.toFixed(2)}`}
+    value={formatarMoeda(premiumProfit)}
   />
 
   <InfoItem
     label="Valorização Total"
-    value={`R$ ${(maoDeObra + premiumProfit).toFixed(2)}`}
+    value={formatarMoeda(maoDeObra + premiumProfit)}
   />
 
 <InfoItem
@@ -878,9 +880,7 @@ const custoTotal =
 
 <InfoItem
   label="Custo Total"
-  value={`R$ ${custoTotalProduto.toFixed(
-    2
-  )}`}
+  value={formatarMoeda(custoTotalProduto)}
 />
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -1041,11 +1041,11 @@ options={[
       </p>
 
       <h3 className="mt-2 text-3xl font-bold text-amber-900">
-        R$ {minimumPrice.toFixed(2)}
+        {formatarMoeda(minimumPrice)}
       </h3>
 
       <p className="mt-3 text-sm text-green-700">
-        Lucro: R$ {minimumProfit.toFixed(2)}
+        Lucro: {formatarMoeda(minimumProfit)}
       </p>
 
       <p className="text-sm text-slate-600">
@@ -1059,11 +1059,11 @@ options={[
       </p>
 
       <h3 className="mt-2 text-3xl font-bold text-blue-900">
-        R$ {recommendedPrice.toFixed(2)}
+        {formatarMoeda(recommendedPrice)}
       </h3>
 
       <p className="mt-3 text-sm text-green-700">
-        Lucro: R$ {recommendedProfit.toFixed(2)}
+        Lucro: {formatarMoeda(recommendedProfit)}
       </p>
 
       <p className="text-sm text-slate-600">
@@ -1077,11 +1077,11 @@ options={[
       </p>
 
       <h3 className="mt-2 text-3xl font-bold text-emerald-900">
-        R$ {premiumPrice.toFixed(2)}
+        {formatarMoeda(premiumPrice)}
       </h3>
 
       <p className="mt-3 text-sm text-green-700">
-        Lucro: R$ {premiumProfit.toFixed(2)}
+        Lucro: {formatarMoeda(premiumProfit)}
       </p>
 
       <p className="text-sm text-slate-600">
@@ -1173,10 +1173,9 @@ options={[
                       </td>
 
                       <td className="py-5 font-bold">
-                        R${" "}
-                        {Number(
-                          item.custo_total
-                        ).toFixed(2)}
+                        {formatarMoeda(
+                          Number(item.custo_total)
+                        )}
                       </td>
 
                       <td className="py-5">

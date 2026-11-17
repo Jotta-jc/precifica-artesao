@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import { useEffect, useState } from "react";
 
 import { NOME_SISTEMA } from "@/lib/marca";
@@ -414,7 +416,7 @@ const minimumMargin =
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-blue-900">
-      R$ {laborCost.toFixed(2)}
+      {formatarMoeda(laborCost)}
     </h3>
   </div>
 
@@ -424,7 +426,7 @@ const minimumMargin =
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-green-900">
-      R$ {premiumProfit.toFixed(2)}
+      {formatarMoeda(premiumProfit)}
     </h3>
   </div>
 
@@ -434,7 +436,7 @@ const minimumMargin =
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-violet-900">
-      R$ {valorizacaoTotal.toFixed(2)}
+      {formatarMoeda(valorizacaoTotal)}
     </h3>
   </div>
 
@@ -457,7 +459,7 @@ const minimumMargin =
             </p>
 
             <strong className="text-3xl">
-              R$ {materialsCost.toFixed(2)}
+              {formatarMoeda(materialsCost)}
             </strong>
           </div>
 
@@ -467,7 +469,7 @@ const minimumMargin =
             </p>
 
             <strong className="text-3xl">
-              R$ {packagingCost.toFixed(2)}
+              {formatarMoeda(packagingCost)}
             </strong>
           </div>
 
@@ -477,7 +479,7 @@ const minimumMargin =
             </p>
 
             <strong className="text-3xl">
-              R$ {extraCost.toFixed(2)}
+              {formatarMoeda(extraCost)}
             </strong>
           </div>
 <div className="rounded-2xl bg-emerald-100 p-4">
@@ -486,7 +488,7 @@ const minimumMargin =
   </p>
 
   <strong className="text-3xl text-emerald-900">
-    R$ {totalCost.toFixed(2)}
+    {formatarMoeda(totalCost)}
   </strong>
 </div>
         </div>
@@ -499,11 +501,11 @@ const minimumMargin =
       </p>
 
       <h3 className="mt-2 text-4xl font-black">
-        R$ {minimumPrice.toFixed(2)}
+        {formatarMoeda(minimumPrice)}
       </h3>
 
       <p className="mt-3 text-green-700 font-medium">
-        Lucro: R$ {minimumProfit.toFixed(2)}
+        Lucro: {formatarMoeda(minimumProfit)}
               </p>
               <p className="text-sm text-slate-500">
   Margem: {minimumMargin.toFixed(1)}%
@@ -516,11 +518,11 @@ const minimumMargin =
       </p>
 
       <h3 className="mt-2 text-4xl font-black">
-        R$ {principalPrice.toFixed(2)}
+        {formatarMoeda(principalPrice)}
       </h3>
 
       <p className="mt-3 text-green-700 font-medium">
-        Lucro: R$ {principalProfit.toFixed(2)}
+        Lucro: {formatarMoeda(principalProfit)}
       </p>
       <p className="text-sm text-slate-500">
   Margem: {principalMargin.toFixed(1)}%
@@ -533,11 +535,11 @@ const minimumMargin =
       </p>
 
       <h3 className="mt-2 text-4xl font-black text-green-800">
-        R$ {premiumPrice.toFixed(2)}
+        {formatarMoeda(premiumPrice)}
       </h3>
 
       <p className="mt-3 text-green-800 font-medium">
-        Lucro: R$ {premiumProfit.toFixed(2)}
+        Lucro: {formatarMoeda(premiumProfit)}
       </p>
       <p className="text-sm text-green-700">
   Margem: {premiumMargin.toFixed(1)}%

@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import {
   useEffect,
   useMemo,
@@ -228,9 +230,8 @@ export default function Dashboard() {
           </p>
 
           <h2 className="text-5xl font-black text-green-600">
-            R${" "}
-            {faturamentoPotencial.toFixed(
-              2
+            {formatarMoeda(
+              faturamentoPotencial
             )}
           </h2>
 

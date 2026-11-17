@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import PageHeader from "@/components/ui/PageHeader";
 import Link from "next/link";
 
@@ -301,10 +303,9 @@ useEffect(() => {
                   </td>
 
                   <td className="p-4 text-sm text-slate-900 md:text-lg">
-                    R${" "}
-                    {Number(
-                      product.preco
-                    ).toFixed(2)}
+                    {formatarMoeda(
+                      Number(product.preco)
+                    )}
                   </td>
 
                   <td className="p-4">

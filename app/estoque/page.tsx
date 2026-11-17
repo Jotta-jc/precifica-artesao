@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda, formatarCustoUnitario } from "@/lib/formatar";
+
 import { useState } from "react";
 import { useEffect } from "react";
 
@@ -348,7 +350,7 @@ return (
   </p>
 
   <h3 className="mt-2 text-2xl font-bold text-green-900">
-    R$ {custoUnitario.toFixed(4)}
+    {formatarCustoUnitario(custoUnitario)}
   </h3>
 </div>
 <div className="mt-6">
@@ -463,11 +465,12 @@ return (
               </td>
 
               <td className="p-3">
-                R${" "}
-                {Number(
-                  movement.valor_total ||
-                    0
-                ).toFixed(2)}
+                {formatarMoeda(
+                  Number(
+                    movement.valor_total ||
+                      0
+                  )
+                )}
               </td>
               <td className="p-3">
   {movement.observacao}

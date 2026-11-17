@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda, formatarCustoUnitario } from "@/lib/formatar";
+
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -410,10 +412,9 @@ export default function MateriaisPage() {
                     fontSize: "18px",
                   }}
                 >
-                  R${" "}
-                  {Number(
-                    material.preco
-                  ).toFixed(2)}
+                  {formatarMoeda(
+                    Number(material.preco)
+                  )}
                 </td>
 
                 <td
@@ -422,13 +423,12 @@ export default function MateriaisPage() {
     fontSize: "18px",
   }}
 >
-  R${" "}
-  {(
+  {formatarCustoUnitario(
     Number(material.preco || 0) /
-    Number(
-      material.quantidade_comprada || 1
-    )
-  ).toFixed(4)}
+      Number(
+        material.quantidade_comprada || 1
+      )
+  )}
 </td>
 
                 <td

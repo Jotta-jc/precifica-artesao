@@ -10,6 +10,23 @@ export function formatarMoeda(valor: number): string {
   );
 }
 
+const formatadorCustoUnitario = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+});
+
+/**
+ * Custo por unidade (grama, metro...): "R$" com 2 a 4 casas decimais.
+ * 0.5434782 → "R$ 0,5435"; 0.08 → "R$ 0,08"; inválido → "R$ 0,00".
+ */
+export function formatarCustoUnitario(valor: number): string {
+  return formatadorCustoUnitario.format(
+    Number.isFinite(valor) ? valor : 0
+  );
+}
+
 /**
  * "1.234,5" — até `casas` casas decimais, sem zeros desnecessários.
  * `casasMinimas` força zeros à direita (ex.: 2 → "12,50").

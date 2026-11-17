@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import { getProfitLevels } from "@/services/profitLevels.service";
 import { getKnowledgeSettings } from "@/services/knowledgeSettings.service";
 
@@ -274,7 +276,7 @@ function limparCalculadora() {
     </span>
 
     <span className="ml-2 font-bold text-blue-900">
-      R$ {valorHora.toFixed(2)}
+      {formatarMoeda(valorHora)}
     </span>
   </div>
 
@@ -483,7 +485,7 @@ function limparCalculadora() {
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-blue-900">
-      R$ {custoMaoDeObra.toFixed(2)}
+      {formatarMoeda(custoMaoDeObra)}
     </h3>
   </div>
 
@@ -493,7 +495,7 @@ function limparCalculadora() {
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-green-900">
-      R$ {premiumProfit.toFixed(2)}
+      {formatarMoeda(premiumProfit)}
     </h3>
   </div>
 
@@ -503,7 +505,7 @@ function limparCalculadora() {
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-violet-900">
-      R$ {valorizacaoTotal.toFixed(2)}
+      {formatarMoeda(valorizacaoTotal)}
     </h3>
   </div>
 
@@ -517,11 +519,11 @@ function limparCalculadora() {
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-slate-900">
-      R$ {minimumPrice.toFixed(2)}
+      {formatarMoeda(minimumPrice)}
     </h3>
 
     <p className="mt-2 text-sm text-green-700">
-      Lucro: R$ {minimumProfit.toFixed(2)}
+      Lucro: {formatarMoeda(minimumProfit)}
     </p>
 
     <p className="text-sm text-slate-500">
@@ -535,11 +537,11 @@ function limparCalculadora() {
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-slate-900">
-      R$ {recommendedPrice.toFixed(2)}
+      {formatarMoeda(recommendedPrice)}
     </h3>
 
     <p className="mt-2 text-sm text-green-700">
-      Lucro: R$ {recommendedProfit.toFixed(2)}
+      Lucro: {formatarMoeda(recommendedProfit)}
     </p>
 
     <p className="text-sm text-slate-500">
@@ -553,11 +555,11 @@ function limparCalculadora() {
     </p>
 
     <h3 className="mt-2 text-3xl font-bold text-emerald-900">
-      R$ {premiumPrice.toFixed(2)}
+      {formatarMoeda(premiumPrice)}
     </h3>
 
     <p className="mt-2 text-sm text-green-800">
-      Lucro: R$ {premiumProfit.toFixed(2)}
+      Lucro: {formatarMoeda(premiumProfit)}
     </p>
 
     <p className="text-sm text-emerald-700">

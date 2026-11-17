@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import {
   useEffect,
   useState,
@@ -552,9 +554,9 @@ async function salvarPedido() {
 </td>
 
 <td className="p-3">
-  R$ {Number(
-    pedido.valor_total
-  ).toFixed(2)}
+  {formatarMoeda(
+    Number(pedido.valor_total)
+  )}
 </td>
 <td className="p-3">
   <div className="flex gap-2">

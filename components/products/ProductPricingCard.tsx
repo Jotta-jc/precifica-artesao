@@ -1,3 +1,5 @@
+import { formatarMoeda } from "@/lib/formatar";
+
 type ProductPricingCardProps = {
   custoTotalProduto: number;
   maoDeObra: number;
@@ -54,7 +56,7 @@ export function ProductPricingCard({
               fontWeight: "bold",
             }}
           >
-            R$ {custoTotalProduto.toFixed(2)}
+            {formatarMoeda(custoTotalProduto)}
           </span>
         </div>
 
@@ -76,7 +78,7 @@ export function ProductPricingCard({
               fontWeight: "bold",
             }}
           >
-            R$ {maoDeObra.toFixed(2)}
+            {formatarMoeda(maoDeObra)}
           </span>
         </div>
 
@@ -120,7 +122,7 @@ export function ProductPricingCard({
               fontWeight: "bold",
             }}
           >
-            R$ {precoSugerido.toFixed(2)}
+            {formatarMoeda(precoSugerido)}
           </span>
         </div>
       </div>

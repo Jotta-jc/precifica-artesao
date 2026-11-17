@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarMoeda } from "@/lib/formatar";
+
 import {
   LineChart,
   Line,
@@ -99,9 +101,16 @@ export function FinancialEvolutionChart({
               }}
               axisLine={false}
               tickLine={false}
+              width={96}
+              tickFormatter={(valor) =>
+                formatarMoeda(Number(valor))
+              }
             />
 
             <Tooltip
+              formatter={(valor) =>
+                formatarMoeda(Number(valor))
+              }
               contentStyle={{
                 borderRadius: "14px",
                 border: "none",
