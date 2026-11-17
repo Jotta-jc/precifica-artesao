@@ -1,725 +1,289 @@
 "use client";
 
-import { formatarMoeda, formatarCustoUnitario } from "@/lib/formatar";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { CheckboxField } from "@/components/forms/CheckboxField";
+import { SelectField } from "@/components/forms/SelectField";
+import { TextField } from "@/components/forms/TextField";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Icone } from "@/components/ui/Icone";
+import { LinkBotao } from "@/components/ui/LinkBotao";
+import { Loading } from "@/components/ui/Loading";
+import { formatarCustoUnitario } from "@/lib/formatar";
+import {
+  aparenciaSituacao,
+  formatarQuantidadeComUnidade,
+  rotuloUnidade,
+  situacaoEstoque,
+} from "@/lib/materiais";
+import {
+  getCategoriasMaterial,
+  getMateriais,
+  type CategoriaMaterial,
+  type Material,
+} from "@/services/materiais.service";
+
+type Estado = "carregando" | "erro" | "pronto";
+
+/** Minúsculas e sem acentos, para a busca. */
+function normalizar(texto: string) {
+  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+function nomeCategoria(m: Material) {
+  return m.categoria_info?.nome ?? m.categoria ?? "";
+}
+
+function custoTexto(m: Material) {
+  const custo = Number(m.custo_por_unidade ?? 0);
+  return `${formatarCustoUnitario(custo)} por ${rotuloUnidade(m.unidade_uso, 1)}`;
+}
+
+/** Selo: "Arquivado" para arquivados; senão, a situação do estoque. */
+function Situacao({ material }: { material: Material }) {
+  if (material.ativo === false) return <Badge>Arquivado</Badge>;
+
+  const { rotulo, variante } =
+    aparenciaSituacao[situacaoEstoque(material.estoque_atual, material.minimum_stock)];
+
+  return <Badge variante={variante}>{rotulo}</Badge>;
+}
 
 export default function MateriaisPage() {
-  const supabase = createClient();
-  const [materiais, setMateriais] = useState<any[]>([]);
+  const [materiais, setMateriais] = useState<Material[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaMaterial[]>([]);
+  const [estado, setEstado] = useState<Estado>("carregando");
+  const [tentativa, setTentativa] = useState(0);
 
-  const [nome, setNome] = useState("");
-  const [categoria, setCategoria] = useState("");
-  const [unidade, setUnidade] = useState("");
-  const [preco, setPreco] = useState("");
-  const [estoque, setEstoque] = useState("");
-
-  const [
-  quantidadeComprada,
-  setQuantidadeComprada,
-] = useState("");
-
-  const [openModal, setOpenModal] =
-    useState(false);
-
-  const [
-    editingMaterialId,
-    setEditingMaterialId,
-  ] = useState<number | null>(null);
+  const [busca, setBusca] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [mostrarArquivados, setMostrarArquivados] = useState(false);
 
   useEffect(() => {
-    carregarMateriais();
-  }, []);
+    let ativo = true;
 
-  async function carregarMateriais() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    Promise.all([getMateriais(), getCategoriasMaterial()])
+      .then(([lista, cats]) => {
+        if (!ativo) return;
+        setMateriais(lista);
+        setCategorias(cats);
+        setEstado("pronto");
+      })
+      .catch(() => {
+        /* Mensagem técnica não vai para a tela. */
+        if (ativo) setEstado("erro");
+      });
 
-    if (!session) return;
+    return () => {
+      ativo = false;
+    };
+  }, [tentativa]);
 
-    const { data, error } = await supabase
-      .from("materials")
-      .select("*")
-      .order("id", { ascending: false });
-
-    if (error) {
-      console.log(error);
-
-      return;
-    }
-
-    setMateriais(data || []);
+  function tentarDeNovo() {
+    setEstado("carregando");
+    setTentativa((n) => n + 1);
   }
 
-  async function salvarMaterial() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      alert("Usuário não autenticado");
-
-      return;
-    }
-
-    if (
-      !nome ||
-      !categoria ||
-      !unidade ||
-      !preco
-    ) {
-      alert("Preencha todos os campos");
-
-      return;
-    }
-
-    // EDITAR
-    if (editingMaterialId) {
-      const { error } = await supabase
-        .from("materials")
-.update({
-  nome,
-  categoria,
-  unidade,
-
-  quantidade_comprada:
-    Number(
-      quantidadeComprada
-    ),
-
-  preco: Number(preco),
-})
-        .eq("id", editingMaterialId);
-
-      if (error) {
-        console.log(error);
-
-        alert(error.message);
-
-        return;
-      }
-
-      alert("Material atualizado 🚀");
-    }
-
-    // NOVO
-    else {
-      const { error } = await supabase
-        .from("materials")
-.insert([
-  {
-    user_id: session.user.id,
-
-    nome,
-    categoria,
-    unidade,
-
-    quantidade_comprada:
-      Number(
-        quantidadeComprada
+  const ordenados = useMemo(
+    () =>
+      [...materiais].sort((a, b) =>
+        a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
       ),
+    [materiais]
+  );
 
-    preco: Number(preco),
+  const ativos = ordenados.filter((m) => m.ativo !== false);
 
-    estoque: Number(
-  quantidadeComprada
-),
+  const precisamComprar = ativos.filter(
+    (m) => situacaoEstoque(m.estoque_atual, m.minimum_stock) !== "em_dia"
+  );
 
-    estoque_atual:
-      Number(
-        quantidadeComprada
-      ),
-  },
-])
+  const termo = normalizar(busca.trim());
 
-      if (error) {
-        console.log(error);
+  const filtrados = ordenados.filter((m) => {
+    if (!mostrarArquivados && m.ativo === false) return false;
+    if (filtroCategoria && String(m.category_id) !== filtroCategoria) return false;
+    if (termo && !normalizar(m.nome).includes(termo)) return false;
+    return true;
+  });
 
-        alert(error.message);
+  const temFiltro = Boolean(termo || filtroCategoria);
 
-        return;
-      }
-
-      alert("Material salvo com sucesso 🚀");
-    }
-
-    setNome("");
-    setCategoria("");
-    setUnidade("");
-    setPreco("");
-    setEstoque("");
-
-    setEditingMaterialId(null);
-
-    setOpenModal(false);
-
-    carregarMateriais();
+  function limparBusca() {
+    setBusca("");
+    setFiltroCategoria("");
   }
 
-  async function excluirMaterial(id: number) {
-    const confirmar = confirm(
-      "Deseja excluir este material?"
-    );
-
-    if (!confirmar) return;
-
-    const { error } = await supabase
-      .from("materials")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.log(error);
-
-      alert(
-        error.code === "23503"
-          ? "Este material já tem movimentações de estoque ou faz parte da ficha técnica de um produto e não pode ser excluído."
-          : "Não foi possível excluir agora. Tente novamente em instantes."
-      );
-
-      return;
-    }
-
-    carregarMateriais();
-  }
+  const nomesAviso =
+    precisamComprar.slice(0, 3).map((m) => m.nome).join(", ") +
+    (precisamComprar.length > 3 ? ` e mais ${precisamComprar.length - 3}` : "");
 
   return (
-    <main
-      style={{
-        padding: "32px",
-        backgroundColor: "#f3f4f6",
-        minHeight: "100vh",
-      }}
-    >
-      <div
-        style={{
-          marginBottom: "40px",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "52px",
-            color: "#111827",
-            marginBottom: "16px",
-            lineHeight: 1.1,
-          }}
-        >
-          Materiais
-        </h1>
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+      <CabecalhoPagina
+        titulo="Materiais"
+        subtitulo="O que você compra para produzir"
+        acao={
+          <LinkBotao href="/materiais/novo" icone="mais">
+            Novo material
+          </LinkBotao>
+        }
+      />
 
-        <p
-          style={{
-            fontSize: "24px",
-            color: "#64748b",
-            lineHeight: 1.5,
-          }}
-        >
-          Cadastro de insumos e materiais 🧶
-        </p>
-      </div>
+      {estado === "carregando" && <Loading texto="Carregando materiais..." />}
 
-      <button
-        onClick={() => {
-          setEditingMaterialId(null);
+      {estado === "erro" && <ErrorState aoTentarDeNovo={tentarDeNovo} />}
 
-          setNome("");
-          setCategoria("");
-          setUnidade("");
-          setPreco("");
-          setEstoque("");
-
-          setOpenModal(true);
-        }}
-        style={{
-          backgroundColor: "#0f172a",
-          color: "#ffffff",
-          border: "none",
-          padding: "18px 28px",
-          borderRadius: "16px",
-          fontSize: "18px",
-          fontWeight: "bold",
-          cursor: "pointer",
-          marginBottom: "30px",
-        }}
-      >
-        + Novo Material
-      </button>
-
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          borderRadius: "24px",
-          padding: "24px",
-          border: "1px solid #e5e7eb",
-          overflowX: "auto",
-        }}
-      >
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            minWidth: "1000px",
-          }}
-        >
-          <thead>
-            <tr
-              style={{
-                borderBottom:
-                  "1px solid #e5e7eb",
-              }}
-            >
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "16px",
-                  color: "#64748b",
-                  fontSize: "18px",
-                }}
-              >
-                ID
-              </th>
-
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "16px",
-                  color: "#64748b",
-                  fontSize: "18px",
-                }}
-              >
-                Nome
-              </th>
-
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "16px",
-                  color: "#64748b",
-                  fontSize: "18px",
-                }}
-              >
-                Categoria
-              </th>
-
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "16px",
-                  color: "#64748b",
-                  fontSize: "18px",
-                }}
-              >
-                Unidade
-              </th>
-
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "16px",
-                  color: "#64748b",
-                  fontSize: "18px",
-                }}
-              >
-                Preço
-              </th>
-
-              <th
-  style={{
-    textAlign: "left",
-    padding: "16px",
-    color: "#64748b",
-    fontSize: "18px",
-  }}
->
-  Custo Unitário
-</th>
-
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "16px",
-                  color: "#64748b",
-                  fontSize: "18px",
-                }}
-              >
-                Estoque Atual
-              </th>
-
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "16px",
-                  color: "#64748b",
-                  fontSize: "18px",
-                }}
-              >
-                Ações
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {materiais.map((material) => (
-              <tr
-                key={material.id}
-                style={{
-                  borderBottom:
-                    "1px solid #f1f5f9",
-                }}
-              >
-                <td
-                  style={{
-                    padding: "20px 16px",
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  #{material.id}
-                </td>
-
-                <td
-                  style={{
-                    padding: "20px 16px",
-                    fontSize: "18px",
-                  }}
-                >
-                  {material.nome}
-                </td>
-
-                <td
-                  style={{
-                    padding: "20px 16px",
-                    fontSize: "18px",
-                  }}
-                >
-                  {material.categoria}
-                </td>
-
-                <td
-                  style={{
-                    padding: "20px 16px",
-                    fontSize: "18px",
-                  }}
-                >
-                  {material.unidade}
-                </td>
-
-                <td
-                  style={{
-                    padding: "20px 16px",
-                    fontSize: "18px",
-                  }}
-                >
-                  {formatarMoeda(
-                    Number(material.preco)
-                  )}
-                </td>
-
-                <td
-  style={{
-    padding: "20px 16px",
-    fontSize: "18px",
-  }}
->
-  {formatarCustoUnitario(
-    Number(material.preco || 0) /
-      Number(
-        material.quantidade_comprada || 1
-      )
-  )}
-</td>
-
-                <td
-                  style={{
-                    padding: "20px 16px",
-                    fontSize: "18px",
-                  }}
-                >
-                  {material.estoque_atual}
-                </td>
-
-                <td
-                  style={{
-                    padding: "20px 16px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "12px",
-                    }}
-                  >
-                    <button
-                      onClick={() => {
-                        setEditingMaterialId(
-                          material.id
-                        );
-
-                        setNome(
-                          material.nome
-                        );
-
-                        setCategoria(
-                          material.categoria
-                        );
-
-                        setUnidade(
-                          material.unidade
-                        );
-
-                        setPreco(
-                          String(
-                            material.preco
-                          )
-                        );
-
-                        setQuantidadeComprada(
-  String(
-    material.quantidade_comprada || 0
-  )
-);
-
-                        setEstoque(
-                          String(
-                            material.estoque
-                          )
-                        );
-
-                        setOpenModal(true);
-                      }}
-                      style={{
-                        backgroundColor:
-                          "#2563eb",
-                        color: "#ffffff",
-                        border: "none",
-                        padding:
-                          "12px 18px",
-                        borderRadius:
-                          "12px",
-                        fontWeight: "bold",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Editar
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        excluirMaterial(
-                          material.id
-                        )
-                      }
-                      style={{
-                        backgroundColor:
-                          "#dc2626",
-                        color: "#ffffff",
-                        border: "none",
-                        padding:
-                          "12px 18px",
-                        borderRadius:
-                          "12px",
-                        fontWeight: "bold",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {openModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor:
-              "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 999,
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              padding: "32px",
-              borderRadius: "24px",
-              width: "100%",
-              maxWidth: "500px",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "32px",
-                marginBottom: "24px",
-              }}
-            >
-              {editingMaterialId
-                ? "Editar Material"
-                : "Novo Material"}
-            </h2>
-
-            <input
-              placeholder="Nome"
-              value={nome}
-              onChange={(e) =>
-                setNome(e.target.value)
-              }
-              style={{
-                width: "100%",
-                padding: "16px",
-                marginBottom: "16px",
-                borderRadius: "14px",
-                border:
-                  "1px solid #cbd5e1",
-                fontSize: "18px",
-              }}
-            />
-
-            <input
-              placeholder="Categoria"
-              value={categoria}
-              onChange={(e) =>
-                setCategoria(
-                  e.target.value
-                )
-              }
-              style={{
-                width: "100%",
-                padding: "16px",
-                marginBottom: "16px",
-                borderRadius: "14px",
-                border:
-                  "1px solid #cbd5e1",
-                fontSize: "18px",
-              }}
-            />
-
-<select
-  value={unidade}
-  onChange={(e) =>
-    setUnidade(
-      e.target.value
-    )
-  }
-  style={{
-    width: "100%",
-    padding: "16px",
-    marginBottom: "16px",
-    borderRadius: "14px",
-    border: "1px solid #cbd5e1",
-    fontSize: "18px",
-  }}
->
-  <option value="">
-    Selecione a unidade
-  </option>
-
-  <option value="g">
-    Grama (g)
-  </option>
-
-  <option value="m">
-    Metro (m)
-  </option>
-
-  <option value="un">
-    Unidade (un)
-  </option>
-</select>
-
-<input
-  type="number"
-  placeholder="Quantidade Comprada"
-  value={quantidadeComprada}
-  onChange={(e) =>
-    setQuantidadeComprada(
-      e.target.value
-    )
-  }
-  style={{
-    width: "100%",
-    padding: "16px",
-    marginBottom: "16px",
-    borderRadius: "14px",
-    border: "1px solid #cbd5e1",
-    fontSize: "18px",
-  }}
-/>
-            <input
-              type="number"
-              placeholder="Preço"
-              value={preco}
-              onChange={(e) =>
-                setPreco(e.target.value)
-              }
-              style={{
-                width: "100%",
-                padding: "16px",
-                marginBottom: "16px",
-                borderRadius: "14px",
-                border:
-                  "1px solid #cbd5e1",
-                fontSize: "18px",
-              }}
-            />
-
-            <div
-              style={{
-                display: "flex",
-                gap: "12px",
-              }}
-            >
-              <button
-                onClick={salvarMaterial}
-                style={{
-                  flex: 1,
-                  backgroundColor:
-                    "#0f172a",
-                  color: "#ffffff",
-                  border: "none",
-                  padding: "16px",
-                  borderRadius: "14px",
-                  fontSize: "18px",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                }}
-              >
-                Salvar
-              </button>
-
-              <button
-                onClick={() =>
-                  setOpenModal(false)
-                }
-                style={{
-                  flex: 1,
-                  backgroundColor:
-                    "#e5e7eb",
-                  color: "#111827",
-                  border: "none",
-                  padding: "16px",
-                  borderRadius: "14px",
-                  fontSize: "18px",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+      {estado === "pronto" && materiais.length === 0 && (
+        <EmptyState
+          icone="materiais"
+          titulo="Você ainda não cadastrou materiais"
+          texto="Cadastre o que você compra para produzir e o sistema calcula o custo de cada peça."
+          acao={
+            <LinkBotao href="/materiais/novo" icone="mais">
+              Cadastrar o primeiro material
+            </LinkBotao>
+          }
+        />
       )}
-    </main>
+
+      {estado === "pronto" && materiais.length > 0 && (
+        <>
+          {precisamComprar.length > 0 && (
+            <div className="mb-6 flex items-start gap-3 rounded-2xl bg-aviso-fundo p-4 text-lg text-aviso-texto">
+              <Icone nome="alerta" className="mt-0.5" />
+              <div>
+                <p className="font-bold">
+                  {precisamComprar.length === 1
+                    ? "1 material está acabando"
+                    : `${precisamComprar.length} materiais estão acabando`}
+                </p>
+                <p>{nomesAviso}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-6 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] md:items-start">
+            <TextField
+              rotulo="Buscar material"
+              tipo="search"
+              valor={busca}
+              aoMudar={setBusca}
+              dica="Pelo nome do material"
+            />
+            <SelectField
+              rotulo="Categoria"
+              valor={filtroCategoria}
+              aoMudar={setFiltroCategoria}
+              opcoes={categorias.map((c) => ({ valor: String(c.id), rotulo: c.nome }))}
+              textoVazio="Todas"
+            />
+          </div>
+
+          <div className="mb-6">
+            <CheckboxField
+              rotulo="Mostrar arquivados"
+              marcado={mostrarArquivados}
+              aoMudar={setMostrarArquivados}
+            />
+          </div>
+
+          {filtrados.length === 0 ? (
+            <div className="flex flex-col items-start gap-3 rounded-3xl border border-borda bg-cartao p-5 text-lg">
+              <p>
+                {temFiltro
+                  ? termo
+                    ? <>Nenhum material encontrado para &lsquo;{busca.trim()}&rsquo;.</>
+                    : "Nenhum material nesta categoria."
+                  : "Nenhum material ativo. Marque “Mostrar arquivados” para ver os arquivados."}
+              </p>
+              {temFiltro && (
+                <Button variante="discreto" onClick={limparBusca}>
+                  Limpar busca
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Celular: cartões clicáveis */}
+              <ul className="flex flex-col gap-3 md:hidden">
+                {filtrados.map((m) => (
+                  <li key={m.id}>
+                    <Link
+                      href={`/materiais/${m.id}`}
+                      className="flex min-h-[88px] items-center gap-3 rounded-3xl border border-borda bg-cartao p-4 text-texto hover:bg-destaque-suave focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-destaque"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xl font-bold">{m.nome}</span>
+                          <Situacao material={m} />
+                        </div>
+                        {nomeCategoria(m) && (
+                          <p className="mt-1 text-base text-texto-suave">{nomeCategoria(m)}</p>
+                        )}
+                        <p className="mt-1 text-lg">
+                          Em estoque:{" "}
+                          {formatarQuantidadeComUnidade(Number(m.estoque_atual ?? 0), m.unidade_uso)}
+                        </p>
+                        <p className="text-lg">Custo: {custoTexto(m)}</p>
+                      </div>
+                      <Icone nome="avancar" className="text-destaque" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Computador: tabela */}
+              <div className="hidden overflow-hidden rounded-3xl border border-borda bg-cartao md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-lg">
+                    <thead>
+                      <tr className="border-b border-borda text-base text-texto-suave">
+                        <th scope="col" className="px-5 py-4 font-bold">Nome</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Categoria</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Em estoque</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Custo por unidade</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Situação</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtrados.map((m) => (
+                        <tr key={m.id} className="border-b border-borda last:border-b-0">
+                          <td className="px-5 py-3 font-bold">{m.nome}</td>
+                          <td className="px-5 py-3">{nomeCategoria(m) || "—"}</td>
+                          <td className="whitespace-nowrap px-5 py-3">
+                            {formatarQuantidadeComUnidade(Number(m.estoque_atual ?? 0), m.unidade_uso)}
+                          </td>
+                          <td className="whitespace-nowrap px-5 py-3">{custoTexto(m)}</td>
+                          <td className="px-5 py-3">
+                            <Situacao material={m} />
+                          </td>
+                          <td className="px-5 py-3">
+                            <LinkBotao
+                              href={`/materiais/${m.id}`}
+                              variante="secundario"
+                              icone="editar"
+                              aria-label={`Editar ${m.nome}`}
+                            >
+                              Editar
+                            </LinkBotao>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
   );
 }

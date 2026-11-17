@@ -39,6 +39,7 @@ export function Badge({
         text-base
         font-bold
         leading-tight
+        whitespace-nowrap
         ${estilos[variante]}
         ${className}
       `}
