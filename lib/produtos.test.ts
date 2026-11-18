@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { calcularPrecos, ErroPrecificacao } from "./precificacao";
+import { calcularPrecos, centavos, ErroPrecificacao } from "./precificacao";
 import {
   calcularMetaProduto,
   calcularPrecoProduto,
@@ -216,7 +216,7 @@ describe("custoDoItem", () => {
     for (const ficha of fichas) {
       const soma = ficha.reduce((total, item) => total + custoDoItem(item), 0);
       const motor = calcularPrecoProduto(peca, ficha, atelie).custo.custoMateriais;
-      expect(Math.round(soma * 100) / 100).toBe(motor);
+      expect(centavos(soma)).toBe(motor);
     }
   });
 });

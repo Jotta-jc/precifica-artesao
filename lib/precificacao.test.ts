@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   calcularCustoPeca,
+  custoDoMaterial,
   calcularPecasParaMeta,
   calcularPrecos,
   calcularValorHora,
@@ -70,6 +71,27 @@ describe("calcularCustoPeca", () => {
       extras: 0,
       custoTotal: 242,
     });
+  });
+
+  it("soma os materiais item por item (frações de centavo)", () => {
+    const custo = calcularCustoPeca({
+      materiais: [
+        { quantidade: 1, custoPorUnidade: 0.005 },
+        { quantidade: 1, custoPorUnidade: 0.005 },
+      ],
+      horas: 0,
+      valorHora: 0,
+      percentualComplexidade: 0,
+      embalagem: 0,
+      extras: 0,
+    });
+    // Cada item: R$ 0,005 → R$ 0,01. Antes, somava bruto e dava R$ 0,01.
+    expect(custo.custoMateriais).toBe(0.02);
+    expect(custo.custoTotal).toBe(0.02);
+  });
+
+  it("arredonda 1,005 para 1,01", () => {
+    expect(custoDoMaterial({ quantidade: 1, custoPorUnidade: 1.005 })).toBe(1.01);
   });
 
   it("ficha sem materiais → custoMateriais 0", () => {

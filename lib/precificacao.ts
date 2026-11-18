@@ -89,9 +89,10 @@ export class ErroPrecificacao extends Error {
 // Auxiliares
 // ---------------------------------------------------------------------
 
-/** Arredonda para centavos (só no resultado final). */
-function centavos(valor: number): number {
-  return Math.round(valor * 100) / 100;
+/** Arredonda para centavos. Usada nos itens da ficha e nos resultados. */
+export function centavos(valor: number): number {
+  // toPrecision(12) tira o erro de ponto flutuante: 1,005 × 100 = 100,4999… viraria 1,00.
+  return Math.round(Number((valor * 100).toPrecision(12))) / 100;
 }
 
 /** Recusa número negativo (ou que não seja número). */
@@ -140,6 +141,11 @@ export interface CustoPeca {
   custoTotal: number;
 }
 
+/** Custo de um item da ficha, arredondado em centavos (como nota fiscal). */
+export function custoDoMaterial(m: MaterialDaFicha): number {
+  return centavos(m.quantidade * m.custoPorUnidade);
+}
+
 /** Custo = materiais + tempo + adicional de complexidade (sobre o tempo) + embalagem + extras. */
 export function calcularCustoPeca(entrada: {
   materiais: MaterialDaFicha[];
@@ -155,10 +161,8 @@ export function calcularCustoPeca(entrada: {
   exigirNaoNegativo(horas, valorHora, percentualComplexidade, embalagem, extras);
   for (const m of materiais) exigirNaoNegativo(m.quantidade, m.custoPorUnidade);
 
-  const custoMateriais = materiais.reduce(
-    (soma, m) => soma + m.quantidade * m.custoPorUnidade,
-    0
-  );
+  /* Item por item, cada um já em centavos (custoDoMaterial). */
+  const custoMateriais = materiais.reduce((soma, m) => soma + custoDoMaterial(m), 0);
   const valorTempo = horas * valorHora;
   const adicionalComplexidade = valorTempo * percentualComplexidade;
   const custoTotal = custoMateriais + valorTempo + adicionalComplexidade + embalagem + extras;

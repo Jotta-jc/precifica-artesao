@@ -82,7 +82,7 @@ export function FichaTecnica({ produtoId, itens, materiais, aoRecarregar }: Fich
 
   const materialEscolhido = disponiveis.find((m) => String(m.id) === materialId) ?? null;
 
-  /* Total = soma de custoDoItem. Pode diferir 1 centavo do motor quando há frações de centavo; a Etapa 6 vai unificar (o motor passa a somar custoDoItem). */
+  /* Total = soma de custoDoItem, igual ao custo de materiais do motor (os dois somam item por item, em centavos). */
   const totalMateriais = itens.reduce((total, item) => total + custoDoItem(item), 0);
 
   async function adicionar(e: FormEvent) {

@@ -13,6 +13,8 @@ import {
   calcularPecasParaMeta,
   calcularPrecos,
   calcularValorHora,
+  centavos,
+  custoDoMaterial,
   PADROES_PRECO,
   type Complexidade,
   type CustoPeca,
@@ -163,10 +165,6 @@ export function horasPorMes(diasTrabalhados: number, horasPorDia: number): numbe
   return diasTrabalhados * horasPorDia;
 }
 
-function centavos(valor: number): number {
-  return Math.round(valor * 100) / 100;
-}
-
 /**
  * Preço do produto pelo motor: valor/hora → custo da peça → três preços.
  * Aula: sem ficha técnica, sem embalagem e com exclusividade "regular".
@@ -234,12 +232,12 @@ export function faltaTempo(produto: Pick<Produto, "tempo_producao">): boolean {
 }
 
 /**
- * Custo de UM item da ficha para mostrar na tela: quantidade × custo por
- * unidade atual, arredondado para centavos como o motor faz no resultado.
+ * Custo de UM item da ficha para mostrar na tela: a mesma conta do motor
+ * (custoDoMaterial), item por item, em centavos.
  * Material sem custo (custo_por_unidade 0) dá 0.
  */
 export function custoDoItem(item: Pick<ItemFicha, "quantidade" | "custo_por_unidade">): number {
-  return centavos(item.quantidade * item.custo_por_unidade);
+  return custoDoMaterial({ quantidade: item.quantidade, custoPorUnidade: item.custo_por_unidade });
 }
 
 /** Algum material da ficha está sem custo (o preço pode sair baixo demais). */
