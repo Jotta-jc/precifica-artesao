@@ -5,13 +5,13 @@ import { useEffect, useState } from "react";
 
 import { FichaTecnica } from "@/components/produtos/FichaTecnica";
 import { FormularioProduto } from "@/components/produtos/FormularioProduto";
+import { PainelPreco } from "@/components/produtos/PainelPreco";
 import { useAvisos } from "@/components/ui/Avisos";
 import { Badge } from "@/components/ui/Badge";
 import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
 import { Cartao } from "@/components/ui/Cartao";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Icone } from "@/components/ui/Icone";
 import { LinkBotao } from "@/components/ui/LinkBotao";
 import { Loading } from "@/components/ui/Loading";
 import {
@@ -21,6 +21,10 @@ import {
   type Produto,
 } from "@/lib/produtos";
 import { createClient } from "@/lib/supabase/client";
+import {
+  buscarConfiguracoesAtelie,
+  type ConfiguracoesAtelie,
+} from "@/services/atelie.service";
 import { getMateriais, type Material } from "@/services/materiais.service";
 import {
   codigoDoErro,
@@ -34,6 +38,7 @@ import {
 } from "@/services/produtos.service";
 
 type Estado = "carregando" | "naoEncontrado" | "erro" | "pronto";
+type EstadoAtelie = "carregando" | "erro" | "pronto";
 
 /** Os campos que o formulário edita, a partir do produto lido. */
 function dadosDoProduto(p: Produto): DadosProduto {
@@ -62,6 +67,9 @@ export default function EditarProdutoPage() {
   const [itens, setItens] = useState<ItemFicha[]>([]);
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [salvando, setSalvando] = useState(false);
+  const [atelie, setAtelie] = useState<ConfiguracoesAtelie | null>(null);
+  const [estadoAtelie, setEstadoAtelie] = useState<EstadoAtelie>("carregando");
+  const [tentativaAtelie, setTentativaAtelie] = useState(0);
 
   useEffect(() => {
     let ativo = true;
@@ -97,9 +105,35 @@ export default function EditarProdutoPage() {
     };
   }, [id, tentativa]);
 
+  /* Ateliê à parte: se só ele falhar, a página continua e só o painel de preço avisa. */
+  useEffect(() => {
+    let ativo = true;
+
+    buscarConfiguracoesAtelie()
+      .then((config) => {
+        if (!ativo) return;
+        setAtelie(config);
+        setEstadoAtelie("pronto");
+      })
+      .catch(() => {
+        if (ativo) setEstadoAtelie("erro");
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [tentativa, tentativaAtelie]);
+
   function tentarDeNovo() {
     setEstado("carregando");
+    setEstadoAtelie("carregando");
     setTentativa((n) => n + 1);
+  }
+
+  /** Recarrega só os Dados do ateliê. */
+  function tentarAtelieDeNovo() {
+    setEstadoAtelie("carregando");
+    setTentativaAtelie((n) => n + 1);
   }
 
   /** Depois de cada gravação na ficha: lê de novo do banco. */
@@ -217,11 +251,17 @@ export default function EditarProdutoPage() {
               </Cartao>
             )}
 
-            {/* A Etapa 6 (preço) vai ocupar este espaço. */}
-            <div className="flex items-start gap-3 rounded-2xl bg-destaque-suave p-4 text-base text-destaque-escuro">
-              <Icone nome="informacao" tamanho={20} className="mt-0.5" />
-              <p>Preço: em breve nesta tela.</p>
-            </div>
+            {/* Preço: recalcula com o produto e a ficha do estado (já salvos). */}
+            {estadoAtelie === "carregando" && <Loading texto="Carregando o preço..." />}
+            {estadoAtelie === "erro" && (
+              <ErrorState
+                mensagem="Não foi possível carregar os Dados do ateliê."
+                aoTentarDeNovo={tentarAtelieDeNovo}
+              />
+            )}
+            {estadoAtelie === "pronto" && atelie && (
+              <PainelPreco produto={produto} itens={itens} atelie={atelie} />
+            )}
 
             <div>
               <LinkBotao href="/produtos" variante="secundario" icone="voltar">
