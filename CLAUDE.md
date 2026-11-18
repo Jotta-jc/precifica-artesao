@@ -187,6 +187,24 @@ As telas de clientes, produtos e materiais tratam o código `23503` com mensagem
 - **Vitrine pública (Jornada 3):** o visitante (`anon`) continua SEM acesso às tabelas. A vitrine lerá apenas uma função ou view própria que entrega só os campos públicos (nome, descrição, foto, categoria, preço ou "sob consulta", prazo) dos produtos marcados como publicados, e os dados de contato do ateliê. Nunca expõe custo, margem, materiais, estoque, clientes ou pedidos. Essa exceção será desenhada e revisada em tarefa própria; não libere acesso de `anon` a tabelas para "resolver" a vitrine.
 - **Jornada 1 — Materiais (decidido em 17/11/2026):** categorias de material vêm da lista própria de cada artesã (tabela material_categories), com opção de criar novas; unidade de USO escolhida numa lista fixa (grama, quilo, metro, centímetro, mililitro, litro, unidade, par) e a artesã informa quanto vem em cada compra (ex.: rolo com 150 metros), e o sistema calcula o custo por unidade de uso; estoque mínimo com aviso "Acabando"; materiais com histórico podem ser arquivados. Marca, cor, subcategoria e código de barras ficam para depois. Base no banco: migration 20261117000000 (colunas unidade_uso, quantidade_por_compra e custo_por_unidade calculado; categorias padrão para todas as contas, inclusive novas). Tela nova de materiais entregue em 17/11/2026 (grava as colunas novas e as antigas, por compatibilidade com Estoque, Produtos e Pedidos). Estoque (17/11/2026): compras, usos e correções passam pela função registrar_movimentacao_estoque (migration 20261117010000), numa operação só: compra em embalagens, custo = último preço pago, estoque negativo bloqueado. A baixa de estoque da tela de Pedidos ainda é a antiga e deve passar a usar essa função na Jornada 3.
 
+## Jornada 2 — Metodologia de preço (aprovada em 18/11/2026)
+
+Regra: todo cálculo de preço fica num motor único em `lib/precificacao.ts`, com testes. Nenhuma tela calcula preço por conta própria.
+
+Custo da peça = materiais (ficha técnica × custo_por_unidade) + tempo (horas × valor/hora) + adicional de complexidade (percentual sobre o valor do tempo) + embalagem + extras.
+
+- Valor/hora = (quanto quero ganhar no mês + custos fixos do mês) ÷ horas produtivas no mês.
+- Complexidade (sobre o valor do tempo): Simples +0%, Média +15%, Difícil +30%, Peça de autor +50%.
+- Preço mínimo = custo ÷ (1 − taxas de venda − margem mínima). Sem marca e sem exclusividade.
+- Preço justo = custo ÷ (1 − taxas de venda − margem ideal). Sem marca e sem exclusividade.
+- Preço sugerido = preço justo × fator da marca × fator de exclusividade.
+- Exclusividade: Produção regular ×1,0; Sob encomenda ×1,05; Edição limitada ×1,1; Peça única ×1,25.
+- Fator da marca (termômetro): Começando ×1,0; Conhecida na região ×1,2; Reconhecida ×1,5; Referência ×2,0 ou mais (ajuste livre).
+- Termômetro: perguntas 1 (seguidores) e 5 (mídia, feiras, prêmios, aulas) são informadas pela artesã, com lembrete mensal no Início. Perguntas 2 (vendas/mês, média de 3 meses), 3 (encomendas e espera) e 4 (clientes que voltam, 12 meses) passam a ser automáticas na Jornada 3; antes disso, ou com menos de 3 meses de registros, são informadas. A tela mostra a origem de cada número.
+- Valores iniciais: taxas 15%, margem mínima 20%, margem ideal 30%. Todos os percentuais são editáveis em "Dados do ateliê".
+- Exemplo para os testes: materiais 42 + tempo 6 h × 25 = 150 + complexidade 30% = 45 + embalagem 5 → custo 242 → mínimo 372,31; justo 440,00; sugerido 580,80 (marca 1,2 e exclusividade 1,1).
+- Se uma soma de taxas e margem chegar a 100% ou mais, o motor deve devolver erro, nunca dividir por zero ou dar preço negativo.
+
 ---
 
 ## 7. Padrões de código
