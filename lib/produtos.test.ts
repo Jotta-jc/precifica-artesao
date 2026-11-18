@@ -9,9 +9,12 @@ import {
   exclusividadeAntiga,
   faltaTempo,
   fichaTemMaterialSemCusto,
+  filtrarProdutos,
   horasPorMes,
   precoAbaixoDoMinimo,
+  SEM_CATEGORIA,
   validarProduto,
+  type FiltrosProdutos,
   type AtelieParaPreco,
   type ProdutoParaPreco,
 } from "./produtos";
@@ -197,6 +200,59 @@ describe("fichaTemMaterialSemCusto", () => {
   it("false quando todos têm custo ou a ficha está vazia", () => {
     expect(fichaTemMaterialSemCusto([{ semCusto: false }, { semCusto: false }])).toBe(false);
     expect(fichaTemMaterialSemCusto([])).toBe(false);
+  });
+});
+
+describe("filtrarProdutos", () => {
+  const lista = [
+    { nome: "Bolsa Náutica", categoria_id: 1, tipo: "fisico" as const, ativo: true },
+    { nome: "Carteira", categoria_id: 2, tipo: "fisico" as const, ativo: true },
+    { nome: "Aula de crochê", categoria_id: null, tipo: "aula" as const, ativo: true },
+    { nome: "Bolsa antiga", categoria_id: 1, tipo: "fisico" as const, ativo: false },
+  ];
+
+  const semFiltro: FiltrosProdutos = {
+    busca: "",
+    categoria: "",
+    tipo: "",
+    mostrarArquivados: false,
+  };
+
+  const nomes = (filtros: Partial<FiltrosProdutos>) =>
+    filtrarProdutos(lista, { ...semFiltro, ...filtros }).map((p) => p.nome);
+
+  it("sem filtro: só os ativos, na ordem recebida", () => {
+    expect(nomes({})).toEqual(["Bolsa Náutica", "Carteira", "Aula de crochê"]);
+  });
+
+  it("mostra os arquivados quando pedido", () => {
+    expect(nomes({ mostrarArquivados: true })).toContain("Bolsa antiga");
+  });
+
+  it("busca ignora acento e maiúscula", () => {
+    expect(nomes({ busca: "NAUTICA" })).toEqual(["Bolsa Náutica"]);
+    expect(nomes({ busca: "croche" })).toEqual(["Aula de crochê"]);
+  });
+
+  it("filtro 'Sem categoria'", () => {
+    expect(nomes({ categoria: SEM_CATEGORIA })).toEqual(["Aula de crochê"]);
+  });
+
+  it("filtro por categoria (id)", () => {
+    expect(nomes({ categoria: "2" })).toEqual(["Carteira"]);
+  });
+
+  it("filtro por tipo", () => {
+    expect(nomes({ tipo: "aula" })).toEqual(["Aula de crochê"]);
+    expect(nomes({ tipo: "fisico" })).toEqual(["Bolsa Náutica", "Carteira"]);
+  });
+
+  it("filtros combinados", () => {
+    expect(nomes({ busca: "bolsa", categoria: "1", tipo: "fisico" })).toEqual(["Bolsa Náutica"]);
+    expect(
+      nomes({ busca: "bolsa", categoria: "1", tipo: "fisico", mostrarArquivados: true })
+    ).toEqual(["Bolsa Náutica", "Bolsa antiga"]);
+    expect(nomes({ busca: "bolsa", tipo: "aula" })).toEqual([]);
   });
 });
 

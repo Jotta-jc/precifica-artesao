@@ -244,6 +244,56 @@ export function precoAbaixoDoMinimo(preco: number, minimo: number): boolean {
 }
 
 // ---------------------------------------------------------------------
+// Filtros da lista
+// ---------------------------------------------------------------------
+
+/** Valor do filtro de categoria para produtos sem categoria_id. */
+export const SEM_CATEGORIA = "sem-categoria";
+
+export interface FiltrosProdutos {
+  /** Texto da busca pelo nome (sem diferenciar maiúscula nem acento). */
+  busca: string;
+  /** "" = todas; SEM_CATEGORIA = sem categoria; ou o id da categoria. */
+  categoria: string;
+  /** "" = todos; ou o tipo. */
+  tipo: "" | TipoProduto;
+  mostrarArquivados: boolean;
+}
+
+/* Acentos separados pelo normalize("NFD"): faixa Unicode 0300 a 036F. */
+const ACENTOS = new RegExp(
+  `[${String.fromCharCode(0x300)}-${String.fromCharCode(0x36f)}]`,
+  "g"
+);
+
+/** Minúsculas e sem acentos, para a busca. */
+function normalizarTexto(texto: string): string {
+  return texto.normalize("NFD").replace(ACENTOS, "").toLowerCase();
+}
+
+/** Aplica busca, categoria, tipo e arquivados. Mantém a ordem recebida. */
+export function filtrarProdutos<
+  T extends Pick<Produto, "nome" | "categoria_id" | "tipo" | "ativo">,
+>(produtos: T[], filtros: FiltrosProdutos): T[] {
+  const termo = normalizarTexto(filtros.busca.trim());
+
+  return produtos.filter((p) => {
+    if (!filtros.mostrarArquivados && !p.ativo) return false;
+
+    if (filtros.categoria === SEM_CATEGORIA) {
+      if (p.categoria_id !== null) return false;
+    } else if (filtros.categoria && String(p.categoria_id) !== filtros.categoria) {
+      return false;
+    }
+
+    if (filtros.tipo && p.tipo !== filtros.tipo) return false;
+    if (termo && !normalizarTexto(p.nome).includes(termo)) return false;
+
+    return true;
+  });
+}
+
+// ---------------------------------------------------------------------
 // Compatibilidade com as colunas antigas (telas antigas ainda leem)
 // ---------------------------------------------------------------------
 

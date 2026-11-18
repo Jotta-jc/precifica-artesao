@@ -1,574 +1,273 @@
 "use client";
 
-import { formatarMoeda } from "@/lib/formatar";
-
-import PageHeader from "@/components/ui/PageHeader";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
+import { CheckboxField } from "@/components/forms/CheckboxField";
+import { SelectField } from "@/components/forms/SelectField";
+import { TextField } from "@/components/forms/TextField";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Icone } from "@/components/ui/Icone";
+import { LinkBotao } from "@/components/ui/LinkBotao";
+import { Loading } from "@/components/ui/Loading";
+import { formatarMoeda } from "@/lib/formatar";
 import {
-  useEffect,
-  useState,
-} from "react";
+  faltaTempo,
+  filtrarProdutos,
+  ROTULOS_TIPO,
+  SEM_CATEGORIA,
+  type Produto,
+  type TipoProduto,
+} from "@/lib/produtos";
+import {
+  getCategoriasProduto,
+  getProdutos,
+  type CategoriaProduto,
+} from "@/services/produtos.service";
 
-import { createClient } from "@/lib/supabase/client";
+type Estado = "carregando" | "erro" | "pronto";
 
-export default function ProdutosPage() {
-  const supabase = createClient();
-  
-  const [openModal, setOpenModal] =
-    useState(false);
+const opcoesTipo = (Object.keys(ROTULOS_TIPO) as TipoProduto[]).map((tipo) => ({
+  valor: tipo,
+  rotulo: ROTULOS_TIPO[tipo],
+}));
 
-  const [products, setProducts] =
-    useState<any[]>([]);
-
-  const [categorias, setCategorias] =
-  useState<any[]>([]);  
-
-  const [nome, setNome] =
-    useState("");
-
-  const [categoria, setCategoria] =
-    useState("");
-
-  const [preco, setPreco] =
-    useState("");
-
-  const [
-    editingProductId,
-    setEditingProductId,
-  ] = useState<number | null>(null);
-
-  async function carregarProdutos() {
-    const { data, error } =
-      await supabase
-        .from("products")
-        .select("*")
-        .order("id", {
-          ascending: false,
-        });
-
-    if (error) {
-      console.log(error);
-      return;
-    }
-
-    setProducts(data || []);
-  }
-
- async function carregarCategorias() {
-const { data, error } =
-  await supabase
-    .from("material_categories")
-    .select("id, nome")
-    .order("nome", {
-      ascending: true,
-    });
-
-if (error) {
-  console.error("ERRO CATEGORIAS MESSAGE:", error.message);
-  console.error("ERRO CATEGORIAS CODE:", error.code);
-  console.error("ERRO CATEGORIAS DETAILS:", error.details);
-  console.error("ERRO CATEGORIAS HINT:", error.hint);
-
-  return;
+function nomeCategoria(p: Produto) {
+  return p.categoria_info?.nome ?? "Sem categoria";
 }
 
-  setCategorias(data || []);
-  console.log("CATEGORIAS CARREGADAS:", data);
-} 
+/** Preço de venda gravado; nulo ou 0 = ainda não definido. */
+function precoTexto(p: Produto) {
+  return p.preco && p.preco > 0 ? formatarMoeda(p.preco) : "Preço não definido";
+}
 
-useEffect(() => {
-  carregarProdutos();
-  carregarCategorias();
-}, []);
+/** Aviso âmbar "Falta informar o tempo" (ícone + texto). */
+function AvisoTempo() {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-xl bg-aviso-fundo px-3 py-1 text-base text-aviso-texto">
+      <Icone nome="alerta" tamanho={20} />
+      Falta informar o tempo
+    </span>
+  );
+}
 
-  async function salvarProduto() {
-    if (
-      !nome ||
-      !categoria ||
-      !preco
-    ) {
-      alert(
-        "Preencha todos os campos"
-      );
+export default function ProdutosPage() {
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaProduto[]>([]);
+  const [estado, setEstado] = useState<Estado>("carregando");
+  const [tentativa, setTentativa] = useState(0);
 
-      return;
-    }
+  const [busca, setBusca] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState<"" | TipoProduto>("");
+  const [mostrarArquivados, setMostrarArquivados] = useState(false);
 
-    if (editingProductId) {
-      const { error } =
-        await supabase
-          .from("products")
-          .update({
-            nome,
-            categoria,
-            preco: Number(preco),
-          })
-          .eq(
-            "id",
-            editingProductId
-          );
+  useEffect(() => {
+    let ativo = true;
 
-      if (error) {
-        console.log(error);
-
-        alert(
-          "Erro ao atualizar produto"
-        );
-
-        return;
-      }
-
-      alert(
-        "Produto atualizado com sucesso ✏️"
-      );
-    } else {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    alert(
-      "Sua sessão expirou. Entre novamente para salvar."
-    );
-
-    return;
-  }
-
-  const { error } =
-    await supabase
-      .from("products")
-      .insert({
-        nome,
-        categoria,
-        preco: Number(preco),
-        user_id: user.id,
+    Promise.all([getProdutos(), getCategoriasProduto()])
+      .then(([lista, cats]) => {
+        if (!ativo) return;
+        setProdutos(lista);
+        setCategorias(cats);
+        setEstado("pronto");
+      })
+      .catch(() => {
+        /* Mensagem técnica não vai para a tela. */
+        if (ativo) setEstado("erro");
       });
 
-  if (error) {
-        console.log(error);
+    return () => {
+      ativo = false;
+    };
+  }, [tentativa]);
 
-        alert(error.message);
-
-        return;
-      }
-
-      alert(
-        "Produto salvo com sucesso 🚀"
-      );
-    }
-
-    setNome("");
-    setCategoria("");
-    setPreco("");
-
-    setEditingProductId(null);
-
-    setOpenModal(false);
-
-    carregarProdutos();
+  function tentarDeNovo() {
+    setEstado("carregando");
+    setTentativa((n) => n + 1);
   }
 
-  async function excluirProduto(
-    id: number
-  ) {
-    const confirmar = confirm(
-      "Deseja realmente excluir este produto?"
-    );
-
-    if (!confirmar) return;
-
-    const { error } =
-      await supabase
-        .from("products")
-        .delete()
-        .eq("id", id);
-
-    if (error) {
-      console.log(error);
-
-      alert(
-        error.code === "23503"
-          ? "Este produto já aparece em pedidos e não pode ser excluído. Assim o histórico de vendas fica preservado."
-          : "Não foi possível excluir agora. Tente novamente em instantes."
-      );
-
-      return;
-    }
-
-    alert(
-      "Produto excluído com sucesso 🗑️"
-    );
-
-    carregarProdutos();
+  function limparFiltros() {
+    setBusca("");
+    setFiltroCategoria("");
+    setFiltroTipo("");
   }
+
+  const ordenados = useMemo(
+    () =>
+      [...produtos].sort((a, b) =>
+        a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+      ),
+    [produtos]
+  );
+
+  const filtrados = filtrarProdutos(ordenados, {
+    busca,
+    categoria: filtroCategoria,
+    tipo: filtroTipo,
+    mostrarArquivados,
+  });
+
+  const opcoesCategoria = [
+    ...categorias.map((c) => ({ valor: String(c.id), rotulo: c.nome })),
+    { valor: SEM_CATEGORIA, rotulo: "Sem categoria" },
+  ];
 
   return (
-    <main className="bg-gray-100 p-4 md:p-8">
-<PageHeader
-  title="Produtos"
-  subtitle="Cadastro e gerenciamento dos produtos 👜"
-/>
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+      <CabecalhoPagina
+        titulo="Produtos"
+        subtitulo="O que você vende: peças e aulas"
+        acao={
+          <LinkBotao href="/produtos/novo" icone="mais">
+            Novo produto
+          </LinkBotao>
+        }
+      />
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <button
-          onClick={() => {
-            setEditingProductId(
-              null
-            );
+      {estado === "carregando" && <Loading texto="Carregando produtos..." />}
 
-            setNome("");
-            setCategoria("");
-            setPreco("");
+      {estado === "erro" && <ErrorState aoTentarDeNovo={tentarDeNovo} />}
 
-            setOpenModal(true);
-          }}
-          className="
-            rounded-2xl
-            bg-slate-900
-            px-6
-            py-4
-            text-base
-            font-bold
-            text-white
-            transition-all
-            hover:bg-slate-800
-            md:text-xl
-          "
-        >
-          + Novo Produto
-        </button>
-      </div>
-
-      <div
-        className="
-          overflow-x-auto
-          rounded-3xl
-          border
-          border-gray-200
-          bg-white
-          p-4
-          shadow-sm
-          md:p-6
-        "
-      >
-        <table className="min-w-[1000px] w-full border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="p-4 text-left text-sm font-semibold text-gray-500 md:text-lg">
-                ID
-              </th>
-
-              <th className="p-4 text-left text-sm font-semibold text-gray-500 md:text-lg">
-                Produto
-              </th>
-
-              <th className="p-4 text-left text-sm font-semibold text-gray-500 md:text-lg">
-                Categoria
-              </th>
-
-              <th className="p-4 text-left text-sm font-semibold text-gray-500 md:text-lg">
-                Preço
-              </th>
-
-              <th className="p-4 text-left text-sm font-semibold text-gray-500 md:text-lg">
-                Status
-              </th>
-
-              <th className="p-4 text-left text-sm font-semibold text-gray-500 md:text-lg">
-                Ações
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {products.map(
-              (product) => (
-                <tr
-                  key={product.id}
-                  className="border-b border-slate-100"
-                >
-                  <td className="p-4 text-sm font-bold text-slate-900 md:text-lg">
-                    #{product.id}
-                  </td>
-
-                  <td className="p-4 text-sm text-slate-900 md:text-lg">
-                    {product.nome}
-                  </td>
-
-                  <td className="p-4 text-sm text-slate-900 md:text-lg">
-                    {
-                      product.categoria
-                    }
-                  </td>
-
-                  <td className="p-4 text-sm text-slate-900 md:text-lg">
-                    {formatarMoeda(
-                      Number(product.preco)
-                    )}
-                  </td>
-
-                  <td className="p-4">
-                    <span
-                      className="
-                        rounded-full
-                        bg-green-100
-                        px-4
-                        py-2
-                        text-xs
-                        font-bold
-                        text-green-700
-                        md:text-sm
-                      "
-                    >
-                      Ativo
-                    </span>
-                  </td>
-
-                  <td className="p-4">
-                    <div className="flex flex-wrap gap-3">
-                      <Link
-                        href={`/produtos/${product.id}`}
-                        className="
-                          inline-flex
-                          items-center
-                          justify-center
-                          rounded-xl
-                          bg-slate-900
-                          px-4
-                          py-3
-                          text-sm
-                          font-bold
-                          text-white
-                          transition-all
-                          hover:bg-slate-800
-                        "
-                      >
-                        Detalhes
-                      </Link>
-
-                      <button
-                        onClick={() => {
-                          setEditingProductId(
-                            product.id
-                          );
-
-                          setNome(
-                            product.nome
-                          );
-
-                          setCategoria(
-                            product.categoria
-                          );
-
-                          setPreco(
-                            String(
-                              product.preco
-                            )
-                          );
-
-                          setOpenModal(
-                            true
-                          );
-                        }}
-                        className="
-                          rounded-xl
-                          bg-blue-600
-                          px-4
-                          py-3
-                          text-sm
-                          font-bold
-                          text-white
-                          transition-all
-                          hover:bg-blue-700
-                        "
-                      >
-                        Editar
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          excluirProduto(
-                            product.id
-                          )
-                        }
-                        className="
-                          rounded-xl
-                          bg-red-600
-                          px-4
-                          py-3
-                          text-sm
-                          font-bold
-                          text-white
-                          transition-all
-                          hover:bg-red-700
-                        "
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {openModal && (
-        <div
-          className="
-            fixed
-            inset-0
-            z-[999]
-            flex
-            items-center
-            justify-center
-            bg-black/50
-            p-5
-          "
-        >
-          <div
-            className="
-              w-full
-              max-w-lg
-              rounded-3xl
-              bg-white
-              p-6
-              shadow-2xl
-              md:p-8
-            "
-          >
-            <h2 className="mb-6 text-2xl font-bold text-slate-900 md:text-3xl">
-              {editingProductId
-                ? "Editar Produto"
-                : "Novo Produto"}
-            </h2>
-
-            <input
-              placeholder="Nome"
-              value={nome}
-              onChange={(e) =>
-                setNome(
-                  e.target.value
-                )
-              }
-              className="
-                mb-4
-                w-full
-                rounded-2xl
-                border
-                border-slate-300
-                p-4
-                text-base
-                outline-none
-                transition-all
-                focus:border-slate-900
-              "
-            />
-
-<select
-  value={categoria}
-  onChange={(e) => setCategoria(e.target.value)}
-  className="
-    mb-4
-    w-full
-    rounded-2xl
-    border
-    border-slate-300
-    bg-white
-    p-4
-    text-slate-900
-    text-base
-    outline-none
-    transition-all
-    focus:border-slate-900
-  "
->
-  <option value="" className="bg-white text-slate-900">
-    Selecione uma categoria
-  </option>
-
-  {categorias.map((categoriaItem) => (
-    <option
-      key={categoriaItem.id}
-      value={categoriaItem.id}
-      className="bg-white text-slate-900"
-    >
-      {categoriaItem.nome}
-    </option>
-  ))}
-</select>
-
-            <input
-              placeholder="Preço"
-              type="number"
-              value={preco}
-              onChange={(e) =>
-                setPreco(
-                  e.target.value
-                )
-              }
-              className="
-                mb-6
-                w-full
-                rounded-2xl
-                border
-                border-slate-300
-                p-4
-                text-base
-                outline-none
-                transition-all
-                focus:border-slate-900
-              "
-            />
-
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                onClick={() => {
-                  setOpenModal(
-                    false
-                  );
-
-                  setEditingProductId(
-                    null
-                  );
-                }}
-                className="
-                  rounded-2xl
-                  bg-slate-200
-                  px-5
-                  py-3
-                  font-semibold
-                  text-slate-700
-                  transition-all
-                  hover:bg-slate-300
-                "
-              >
-                Cancelar
-              </button>
-
-              <button
-                onClick={
-                  salvarProduto
-                }
-                className="
-                  rounded-2xl
-                  bg-slate-900
-                  px-5
-                  py-3
-                  font-bold
-                  text-white
-                  transition-all
-                  hover:bg-slate-800
-                "
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
-        </div>
+      {estado === "pronto" && produtos.length === 0 && (
+        <EmptyState
+          icone="produtos"
+          titulo="Você ainda não cadastrou produtos"
+          texto="Cadastre o que você vende para calcular o preço de cada peça ou aula."
+          acao={
+            <LinkBotao href="/produtos/novo" icone="mais">
+              Cadastrar produto
+            </LinkBotao>
+          }
+        />
       )}
-    </main>
+
+      {estado === "pronto" && produtos.length > 0 && (
+        <>
+          <div className="mb-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-start">
+            <TextField
+              rotulo="Buscar produto"
+              tipo="search"
+              valor={busca}
+              aoMudar={setBusca}
+              dica="Pelo nome do produto"
+            />
+            <SelectField
+              rotulo="Categoria"
+              valor={filtroCategoria}
+              aoMudar={setFiltroCategoria}
+              opcoes={opcoesCategoria}
+              textoVazio="Todas"
+            />
+            <SelectField
+              rotulo="Tipo"
+              valor={filtroTipo}
+              aoMudar={(v) => setFiltroTipo(v as "" | TipoProduto)}
+              opcoes={opcoesTipo}
+              textoVazio="Todos"
+            />
+          </div>
+
+          <div className="mb-6">
+            <CheckboxField
+              rotulo="Mostrar arquivados"
+              marcado={mostrarArquivados}
+              aoMudar={setMostrarArquivados}
+            />
+          </div>
+
+          {filtrados.length === 0 ? (
+            <div className="flex flex-col items-start gap-3 rounded-3xl border border-borda bg-cartao p-5 text-lg">
+              <p className="font-bold">Nenhum produto encontrado</p>
+              <p className="text-texto-suave">
+                Mude a busca ou os filtros
+                {!mostrarArquivados && ", ou marque “Mostrar arquivados”"}.
+              </p>
+              <Button variante="discreto" onClick={limparFiltros}>
+                Limpar filtros
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Celular: cartões clicáveis */}
+              <ul className="flex flex-col gap-3 md:hidden">
+                {filtrados.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      href={`/produtos/${p.id}`}
+                      className="flex min-h-[88px] items-center gap-3 rounded-3xl border border-borda bg-cartao p-4 text-texto hover:bg-destaque-suave focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-destaque"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xl font-bold">{p.nome}</span>
+                          {!p.ativo && <Badge>Arquivado</Badge>}
+                        </div>
+                        <p className="mt-1 text-base text-texto-suave">
+                          {nomeCategoria(p)} · {ROTULOS_TIPO[p.tipo]}
+                        </p>
+                        <p className="mt-1 text-lg font-bold">{precoTexto(p)}</p>
+                        {faltaTempo(p) && (
+                          <div className="mt-2">
+                            <AvisoTempo />
+                          </div>
+                        )}
+                      </div>
+                      <Icone nome="avancar" className="text-destaque" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Computador: tabela */}
+              <div className="hidden overflow-hidden rounded-3xl border border-borda bg-cartao md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-lg">
+                    <thead>
+                      <tr className="border-b border-borda text-base text-texto-suave">
+                        <th scope="col" className="px-5 py-4 font-bold">Nome</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Categoria</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Tipo</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Preço de venda</th>
+                        <th scope="col" className="px-5 py-4 font-bold">Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtrados.map((p) => (
+                        <tr key={p.id} className="border-b border-borda last:border-b-0">
+                          <td className="px-5 py-3">
+                            <Link
+                              href={`/produtos/${p.id}`}
+                              className="inline-flex min-h-12 items-center rounded-xl font-bold text-destaque underline underline-offset-4 hover:text-destaque-escuro focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-destaque"
+                            >
+                              {p.nome}
+                            </Link>
+                          </td>
+                          <td className="px-5 py-3">{nomeCategoria(p)}</td>
+                          <td className="px-5 py-3">{ROTULOS_TIPO[p.tipo]}</td>
+                          <td className="whitespace-nowrap px-5 py-3">{precoTexto(p)}</td>
+                          <td className="px-5 py-3">
+                            <div className="flex flex-col items-start gap-2">
+                              {!p.ativo && <Badge>Arquivado</Badge>}
+                              {faltaTempo(p) && <AvisoTempo />}
+                              {p.ativo && !faltaTempo(p) && (
+                                <span className="text-texto-suave">—</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
   );
 }
