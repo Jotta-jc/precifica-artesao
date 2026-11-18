@@ -5,6 +5,7 @@ import {
   calcularMetaProduto,
   calcularPrecoProduto,
   complexidadeAntiga,
+  custoDoItem,
   custoTotalItemCompat,
   exclusividadeAntiga,
   faltaTempo,
@@ -189,6 +190,34 @@ describe("faltaTempo e precoAbaixoDoMinimo", () => {
     expect(precoAbaixoDoMinimo(300, 372.31)).toBe(true);
     expect(precoAbaixoDoMinimo(372.31, 372.31)).toBe(false);
     expect(precoAbaixoDoMinimo(400, 372.31)).toBe(false);
+  });
+});
+
+describe("custoDoItem", () => {
+  it("2,5 × 3,20 = 8", () => {
+    expect(custoDoItem({ quantidade: 2.5, custo_por_unidade: 3.2 })).toBe(8);
+  });
+
+  it("material sem custo (0) dá 0", () => {
+    expect(custoDoItem({ quantidade: 300, custo_por_unidade: 0 })).toBe(0);
+  });
+
+  it("a soma dos itens é igual ao custo de materiais do motor", () => {
+    const fichas = [
+      itens,
+      [
+        { quantidade: 2.5, custo_por_unidade: 3.2 },
+        { quantidade: 150, custo_por_unidade: 0.08 },
+        { quantidade: 1, custo_por_unidade: 12.9 },
+      ],
+      [{ quantidade: 230, custo_por_unidade: 0.543478 }],
+    ];
+
+    for (const ficha of fichas) {
+      const soma = ficha.reduce((total, item) => total + custoDoItem(item), 0);
+      const motor = calcularPrecoProduto(peca, ficha, atelie).custo.custoMateriais;
+      expect(Math.round(soma * 100) / 100).toBe(motor);
+    }
   });
 });
 

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { FichaTecnica } from "@/components/produtos/FichaTecnica";
 import { FormularioProduto } from "@/components/produtos/FormularioProduto";
 import { useAvisos } from "@/components/ui/Avisos";
 import { Badge } from "@/components/ui/Badge";
@@ -13,12 +14,19 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Icone } from "@/components/ui/Icone";
 import { LinkBotao } from "@/components/ui/LinkBotao";
 import { Loading } from "@/components/ui/Loading";
-import { ROTULOS_TIPO, type DadosProduto, type Produto } from "@/lib/produtos";
+import {
+  ROTULOS_TIPO,
+  type DadosProduto,
+  type ItemFicha,
+  type Produto,
+} from "@/lib/produtos";
 import { createClient } from "@/lib/supabase/client";
+import { getMateriais, type Material } from "@/services/materiais.service";
 import {
   codigoDoErro,
   createCategoriaProduto,
   getCategoriasProduto,
+  getFichaTecnica,
   getProdutoById,
   mensagemErroProduto,
   updateProduto,
@@ -51,13 +59,20 @@ export default function EditarProdutoPage() {
   const [tentativa, setTentativa] = useState(0);
   const [produto, setProduto] = useState<Produto | null>(null);
   const [categorias, setCategorias] = useState<CategoriaProduto[]>([]);
+  const [itens, setItens] = useState<ItemFicha[]>([]);
+  const [materiais, setMateriais] = useState<Material[]>([]);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     let ativo = true;
 
-    Promise.all([getProdutoById(id), getCategoriasProduto()])
-      .then(([encontrado, cats]) => {
+    Promise.all([
+      getProdutoById(id),
+      getCategoriasProduto(),
+      getFichaTecnica(Number(id)),
+      getMateriais(),
+    ])
+      .then(([encontrado, cats, ficha, listaMateriais]) => {
         if (!ativo) return;
 
         if (!encontrado) {
@@ -67,6 +82,8 @@ export default function EditarProdutoPage() {
 
         setProduto(encontrado);
         setCategorias(cats);
+        setItens(ficha);
+        setMateriais(listaMateriais);
         setEstado("pronto");
       })
       .catch((erro) => {
@@ -83,6 +100,20 @@ export default function EditarProdutoPage() {
   function tentarDeNovo() {
     setEstado("carregando");
     setTentativa((n) => n + 1);
+  }
+
+  /** Depois de cada gravação na ficha: lê de novo do banco. */
+  async function recarregarFicha() {
+    if (!produto) return;
+
+    try {
+      setItens(await getFichaTecnica(produto.id));
+    } catch {
+      avisar({
+        tipo: "erro",
+        texto: "Não foi possível atualizar a ficha. Recarregue a página.",
+      });
+    }
   }
 
   async function salvar(dados: DadosProduto) {
@@ -170,10 +201,26 @@ export default function EditarProdutoPage() {
               />
             </Cartao>
 
-            {/* Etapas 5 e 6 (ficha técnica e preço) vão ocupar este espaço. */}
-            <div className="flex items-start gap-3 rounded-2xl bg-destaque-suave p-4 text-lg text-destaque-escuro">
-              <Icone nome="informacao" className="mt-0.5" />
-              <p>Ficha técnica e preço: em breve nesta tela.</p>
+            {/* A ficha segue o tipo GRAVADO (produto), não o do formulário sem salvar. */}
+            {produto.tipo === "fisico" ? (
+              <FichaTecnica
+                produtoId={produto.id}
+                itens={itens}
+                materiais={materiais}
+                aoRecarregar={recarregarFicha}
+              />
+            ) : (
+              <Cartao titulo="Ficha técnica">
+                <p className="text-lg text-texto-suave">
+                  Aula não tem ficha técnica de materiais.
+                </p>
+              </Cartao>
+            )}
+
+            {/* A Etapa 6 (preço) vai ocupar este espaço. */}
+            <div className="flex items-start gap-3 rounded-2xl bg-destaque-suave p-4 text-base text-destaque-escuro">
+              <Icone nome="informacao" tamanho={20} className="mt-0.5" />
+              <p>Preço: em breve nesta tela.</p>
             </div>
 
             <div>

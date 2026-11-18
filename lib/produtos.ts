@@ -233,6 +233,15 @@ export function faltaTempo(produto: Pick<Produto, "tempo_producao">): boolean {
   return !(Number(produto.tempo_producao) > 0);
 }
 
+/**
+ * Custo de UM item da ficha para mostrar na tela: quantidade × custo por
+ * unidade atual, arredondado para centavos como o motor faz no resultado.
+ * Material sem custo (custo_por_unidade 0) dá 0.
+ */
+export function custoDoItem(item: Pick<ItemFicha, "quantidade" | "custo_por_unidade">): number {
+  return centavos(item.quantidade * item.custo_por_unidade);
+}
+
 /** Algum material da ficha está sem custo (o preço pode sair baixo demais). */
 export function fichaTemMaterialSemCusto(itens: Pick<ItemFicha, "semCusto">[]): boolean {
   return itens.some((item) => item.semCusto);
