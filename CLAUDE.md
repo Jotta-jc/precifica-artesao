@@ -122,8 +122,7 @@ Fatos importantes:
 
 - **RLS ativo em todas as tabelas**, com policies de isolamento por usuária (`auth.uid() = user_id`).
 - Tabelas filhas são protegidas pela mãe: `order_items` pelo pedido, `product_materials` pelo produto.
-- `knowledge_settings` e `profit_levels` são configurações globais: leitura para logados, sem escrita.
-- O visitante não logado (`anon`) não tem acesso a nenhuma tabela. Usuárias logadas (`authenticated`) têm só SELECT, INSERT, UPDATE e DELETE; `knowledge_settings` e `profit_levels` são só SELECT. Nunca conceda acesso a `anon`.
+- O visitante não logado (`anon`) não tem acesso a nenhuma tabela. Usuárias logadas (`authenticated`) têm só SELECT, INSERT, UPDATE e DELETE. Nunca conceda acesso a `anon`.
 - Isolamento testado na prática com duas contas Google (15/11/2026): uma conta não vê nem abre registros da outra.
 - Todas as políticas são para `authenticated` e usam `(select auth.uid())`, a forma rápida (o banco calcula a usuária uma vez por consulta). Toda política nova deve seguir esse padrão.
 - `user_id` é obrigatório (`not null`) em `products` e `materials`. `products`, `material_movements` e `business_metrics` têm ligação com `auth.users`.
@@ -146,16 +145,14 @@ alter table public.nome_tabela enable row level security;
 | `order_items` | `order_id`, `product_id`, quantidade, valor_unitario, valor_total |
 | `products` | `categoria` é texto (hoje grava o id de material_categories: erro conhecido) |
 | `materials` | **`estoque_atual` é a coluna de estoque oficial na prática**; `estoque` é legada |
-| `product_materials` | **ficha técnica, já existe e está em uso** |
+| `product_materials` | **ficha técnica, já existe e está em uso**; quantidade > 0 validada em todas as linhas (migration 20261119180000) |
 | `material_movements` | `tipo` aceita só `entrada`, `saida`, `ajuste` |
 | `material_categories` | coluna `nome` (não `name`); 16 categorias de teste já cadastradas — não reinserir |
 | `business_metrics` | uma linha por usuária (`user_id` único); valor/hora |
-| `pricing_settings` | não usada; a tela antiga que gravava nela (`/configuracoes`) foi desligada na Etapa 8 |
-| `knowledge_settings`, `profit_levels` | globais; o código não usa mais (as calculadoras antigas foram desligadas na Etapa 8) |
 
 ### Tabelas que existem mas o código não usa
 
-`material_units`, `material_brands`, `material_colors`, `material_subcategories` (modelo completo de materiais, com unidade de compra × consumo), `artisan_profile`, `profiles` (preenchida pela função `handle_new_user` no cadastro) e `product_pricing` (colunas repetidas em inglês e português). A tabela `test` foi removida em 14/11/2026.
+`material_units`, `material_brands`, `material_colors`, `material_subcategories` (modelo completo de materiais, com unidade de compra × consumo) e `profiles` (preenchida pela função `handle_new_user` no cadastro). A tabela `test` foi removida em 14/11/2026. Na Etapa 9 (migration 20261119180000) foram apagadas `product_pricing`, `pricing_settings`, `artisan_profile`, `knowledge_settings` e `profit_levels`, que nenhuma tela usava.
 
 ### Exclusões bloqueadas (migration de 14/11/2026)
 
