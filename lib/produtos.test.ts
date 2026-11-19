@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { calcularPrecos, centavos, ErroPrecificacao } from "./precificacao";
 import {
+  adicionarLinhaCalculo,
   calcularMetaProduto,
   calcularPrecoProduto,
   complexidadeAntiga,
   custoDoItem,
+  custoParaCalculo,
   custosMudaram,
   custoTotalItemCompat,
   escolhaInicialPreco,
@@ -14,6 +16,8 @@ import {
   fichaTemMaterialSemCusto,
   filtrarProdutos,
   horasPorMes,
+  itensDoCalculoRapido,
+  materiaisParaCalculo,
   precoAbaixoDoMinimo,
   precoDaEscolha,
   SEM_CATEGORIA,
@@ -317,6 +321,120 @@ describe("fichaTemMaterialSemCusto", () => {
   it("false quando todos têm custo ou a ficha está vazia", () => {
     expect(fichaTemMaterialSemCusto([{ semCusto: false }, { semCusto: false }])).toBe(false);
     expect(fichaTemMaterialSemCusto([])).toBe(false);
+  });
+});
+
+describe("custoParaCalculo (mesma regra da ficha técnica)", () => {
+  it.each([
+    [2.5, 2.5, false],
+    ["2.50", 2.5, false],
+    [0.001, 0.001, false],
+    [null, 0, true],
+    [undefined, 0, true],
+    [0, 0, true],
+    [-1, 0, true],
+    ["abc", 0, true],
+  ] as const)("%s → custo %s, sem custo %s", (valor, custo, semCusto) => {
+    expect(custoParaCalculo(valor)).toEqual({ custo, semCusto });
+  });
+});
+
+describe("Cálculo rápido", () => {
+  const materiais = [
+    { id: 3, nome: "Zíper", custo_por_unidade: 3, ativo: true },
+    { id: 1, nome: "alça de couro", custo_por_unidade: "12.90", ativo: null },
+    { id: 2, nome: "Barbante", custo_por_unidade: 0.12, ativo: false },
+    { id: 4, nome: "Botão", custo_por_unidade: null, ativo: true },
+  ];
+
+  it("materiaisParaCalculo: só os ativos, por nome, sem mudar a lista recebida", () => {
+    const antes = materiais.map((m) => m.nome);
+    const lista = materiaisParaCalculo(materiais);
+
+    expect(lista.map((m) => m.nome)).toEqual(["alça de couro", "Botão", "Zíper"]);
+    expect(materiais.map((m) => m.nome)).toEqual(antes);
+  });
+
+  it("adicionarLinhaCalculo: material novo entra no fim", () => {
+    const linhas = [{ materialId: "3", quantidade: 1 }];
+    const r = adicionarLinhaCalculo(linhas, "1", 2);
+
+    expect(r).toEqual({
+      linhas: [
+        { materialId: "3", quantidade: 1 },
+        { materialId: "1", quantidade: 2 },
+      ],
+      somou: false,
+    });
+    expect(linhas).toEqual([{ materialId: "3", quantidade: 1 }]);
+  });
+
+  it("adicionarLinhaCalculo: material repetido soma a quantidade (0,1 + 0,2 = 0,3)", () => {
+    const linhas = [
+      { materialId: "1", quantidade: 0.1 },
+      { materialId: "3", quantidade: 1 },
+    ];
+    const r = adicionarLinhaCalculo(linhas, "1", 0.2);
+
+    expect(r.somou).toBe(true);
+    expect(r.linhas).toEqual([
+      { materialId: "1", quantidade: 0.3 },
+      { materialId: "3", quantidade: 1 },
+    ]);
+    expect(linhas[0].quantidade).toBe(0.1);
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "adicionarLinhaCalculo: quantidade %s → erro",
+    (quantidade) => {
+      expect(() => adicionarLinhaCalculo([], "1", quantidade)).toThrow(RangeError);
+    }
+  );
+
+  it("itensDoCalculoRapido: custo como texto, sem custo e material inexistente", () => {
+    const r = itensDoCalculoRapido(
+      [
+        { materialId: "1", quantidade: 2 },
+        { materialId: "4", quantidade: 5 },
+        { materialId: "99", quantidade: 1 },
+      ],
+      materiais
+    );
+
+    expect(r).toEqual({
+      itens: [
+        { quantidade: 2, custo_por_unidade: 12.9 },
+        { quantidade: 5, custo_por_unidade: 0 },
+      ],
+      temSemCusto: true,
+    });
+  });
+
+  it("itensDoCalculoRapido: todos com custo → temSemCusto false", () => {
+    const r = itensDoCalculoRapido([{ materialId: "3", quantidade: 2 }], materiais);
+    expect(r.temSemCusto).toBe(false);
+  });
+
+  it("ponta a ponta: mesmo resultado da ficha técnica equivalente (custo 242)", () => {
+    const cadastro = [
+      { id: 10, nome: "Fio", custo_por_unidade: "0.12", ativo: true },
+      { id: 11, nome: "Argola", custo_por_unidade: 3, ativo: true },
+    ];
+    const { itens: doRapido } = itensDoCalculoRapido(
+      [
+        { materialId: "10", quantidade: 300 },
+        { materialId: "11", quantidade: 2 },
+      ],
+      cadastro
+    );
+
+    /* Produto montado na tela, sem id. */
+    const montado: ProdutoParaPreco = { ...peca };
+    const rapido = calcularPrecoProduto(montado, doRapido, atelie);
+    const ficha = calcularPrecoProduto(peca, itens, atelie);
+
+    expect(rapido).toEqual(ficha);
+    expect(rapido.custo.custoTotal).toBe(242);
   });
 });
 

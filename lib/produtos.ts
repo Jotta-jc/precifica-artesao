@@ -245,6 +245,104 @@ export function fichaTemMaterialSemCusto(itens: Pick<ItemFicha, "semCusto">[]): 
   return itens.some((item) => item.semCusto);
 }
 
+/**
+ * Custo por unidade de um material para o motor. O banco pode devolver
+ * numeric como texto; vazio, inválido, zero ou negativo viram 0 e marcam
+ * "sem custo" (a tela avisa). Usada pela ficha técnica e pelo Cálculo rápido.
+ */
+export function custoParaCalculo(valor: number | string | null | undefined): {
+  custo: number;
+  semCusto: boolean;
+} {
+  const custo = Number(valor ?? 0);
+  const semCusto = !Number.isFinite(custo) || custo <= 0;
+  return { custo: semCusto ? 0 : custo, semCusto };
+}
+
+// ---------------------------------------------------------------------
+// Cálculo rápido (sem salvar)
+// ---------------------------------------------------------------------
+
+/** O que o Cálculo rápido precisa de um material (o Material do service serve). */
+export interface MaterialParaCalculo {
+  /* number | string: o service devolve número; o campo de escolha, texto. */
+  id: number | string;
+  nome: string;
+  custo_por_unidade: number | string | null;
+  ativo: boolean | null;
+}
+
+/** Um material escolhido na tela, com quanto a peça usa (unidade do material). */
+export interface LinhaCalculo {
+  materialId: string;
+  quantidade: number;
+}
+
+/** Arredonda em 3 casas (a casa do campo de quantidade), sem sobra de ponto flutuante. */
+function tresCasas(valor: number): number {
+  return Math.round(Number((valor * 1000).toPrecision(12))) / 1000;
+}
+
+/** Materiais que podem ser escolhidos: só os ativos, por nome. Não muda a lista recebida. */
+export function materiaisParaCalculo<T extends MaterialParaCalculo>(materiais: T[]): T[] {
+  return materiais
+    .filter((m) => m.ativo !== false)
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }));
+}
+
+/**
+ * Acrescenta um material. Se ele já está na lista, SOMA a quantidade
+ * (somou = true, a tela avisa); senão entra no fim. Não muda a lista recebida.
+ * Quantidade inválida lança RangeError (proteção: a tela valida antes).
+ */
+export function adicionarLinhaCalculo(
+  linhas: LinhaCalculo[],
+  materialId: string,
+  quantidade: number
+): { linhas: LinhaCalculo[]; somou: boolean } {
+  if (!Number.isFinite(quantidade) || quantidade <= 0) {
+    throw new RangeError("A quantidade precisa ser maior que zero.");
+  }
+
+  const existe = linhas.some((l) => l.materialId === materialId);
+
+  if (!existe) {
+    return { linhas: [...linhas, { materialId, quantidade }], somou: false };
+  }
+
+  return {
+    linhas: linhas.map((l) =>
+      l.materialId === materialId ? { ...l, quantidade: tresCasas(l.quantidade + quantidade) } : l
+    ),
+    somou: true,
+  };
+}
+
+/**
+ * Itens para o motor a partir das linhas escolhidas. O custo segue a mesma
+ * regra da ficha técnica (custoParaCalculo). Linha de material que não está
+ * na lista é ignorada.
+ */
+export function itensDoCalculoRapido(
+  linhas: LinhaCalculo[],
+  materiais: MaterialParaCalculo[]
+): { itens: Pick<ItemFicha, "quantidade" | "custo_por_unidade">[]; temSemCusto: boolean } {
+  const porId = new Map(materiais.map((m) => [String(m.id), m]));
+  const itens: Pick<ItemFicha, "quantidade" | "custo_por_unidade">[] = [];
+  let temSemCusto = false;
+
+  for (const linha of linhas) {
+    const material = porId.get(linha.materialId);
+    if (!material) continue;
+
+    const { custo, semCusto } = custoParaCalculo(material.custo_por_unidade);
+    if (semCusto) temSemCusto = true;
+    itens.push({ quantidade: linha.quantidade, custo_por_unidade: custo });
+  }
+
+  return { itens, temSemCusto };
+}
+
 /** O preço escolhido ficou abaixo do mínimo calculado. */
 export function precoAbaixoDoMinimo(preco: number, minimo: number): boolean {
   return preco < minimo;

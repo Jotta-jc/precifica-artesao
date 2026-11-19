@@ -99,9 +99,9 @@ types/        tipos; vários arquivos ainda vazios
 middleware.ts proteção de rotas
 ```
 
-Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`.
+Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora-rapida`.
 
-Telas antigas desligadas na Etapa 8 (o endereço só redireciona): `/calculadora` e `/calculadora-rapida` → `/produtos`; `/configuracoes` → `/empresa`. O "Cálculo rápido" volta reescrito com o motor depois.
+Cálculo rápido (Etapa 10): `/calculadora-rapida` faz a conta de uma peça ou aula sem cadastrar, com o motor único e os materiais do cadastro; nada é salvo. Telas antigas desligadas na Etapa 8 (o endereço só redireciona): `/calculadora` → `/produtos`; `/configuracoes` → `/empresa`.
 
 Fatos importantes:
 

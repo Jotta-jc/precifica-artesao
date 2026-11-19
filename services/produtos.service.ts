@@ -2,6 +2,7 @@ import { abreviacaoUnidade, type UnidadeUso } from "@/lib/materiais";
 import { centavos } from "@/lib/precificacao";
 import {
   complexidadeAntiga,
+  custoParaCalculo,
   custoTotalItemCompat,
   exclusividadeAntiga,
   validarProduto,
@@ -342,15 +343,14 @@ interface LinhaItem {
 }
 
 function paraItemFicha(linha: LinhaItem): ItemFicha {
-  const custo = Number(linha.materials?.custo_por_unidade ?? 0);
-  const semCusto = !Number.isFinite(custo) || custo <= 0;
+  /* Sem custo → 0 para o motor; a tela avisa pelo semCusto (regra em custoParaCalculo). */
+  const { custo, semCusto } = custoParaCalculo(linha.materials?.custo_por_unidade);
 
   return {
     id: linha.id,
     material_id: linha.material_id,
     quantidade: Number(linha.quantidade ?? 0),
-    /* Sem custo → 0 para o motor; a tela avisa pelo semCusto. */
-    custo_por_unidade: semCusto ? 0 : custo,
+    custo_por_unidade: custo,
     semCusto,
     nome: linha.materials?.nome ?? "Material",
     unidade: linha.materials?.unidade_uso ?? "unidade",
