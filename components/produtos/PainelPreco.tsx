@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 
 import { MoneyField } from "@/components/forms/MoneyField";
+import { Aviso, AvisoAtelie, mensagemDoErroPreco } from "@/components/produtos/AvisosPreco";
+import { CustoDetalhado } from "@/components/produtos/CustoDetalhado";
+import { MetaDoMes } from "@/components/produtos/MetaDoMes";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Cartao } from "@/components/ui/Cartao";
 import { Icone } from "@/components/ui/Icone";
-import { LinkBotao } from "@/components/ui/LinkBotao";
 import { formatarMoeda } from "@/lib/formatar";
 import { centavos, ErroPrecificacao, type Precos } from "@/lib/precificacao";
 import {
@@ -19,6 +21,7 @@ import {
   fichaTemMaterialSemCusto,
   precoAbaixoDoMinimo,
   precoDaEscolha,
+  TEXTOS_PRECO,
   type AtelieParaPreco,
   type ItemFicha,
   type OpcaoPreco,
@@ -35,66 +38,14 @@ interface PainelPrecoProps {
   salvando: boolean;
 }
 
-/** Mensagem do motor (português simples); outro erro vira texto genérico. */
-function mensagemDoErro(erro: unknown): string {
-  return erro instanceof ErroPrecificacao
-    ? erro.message
-    : "Não foi possível calcular o preço agora.";
-}
-
-/** Aviso âmbar com o botão para completar os Dados do ateliê. */
-function AvisoAtelie({ children }: { children: ReactNode }) {
-  return (
-    <div
-      role="alert"
-      className="flex flex-col items-start gap-4 rounded-2xl bg-aviso-fundo p-4 text-lg text-aviso-texto"
-    >
-      <div className="flex items-start gap-3">
-        <Icone nome="alerta" className="mt-0.5" />
-        <p>{children}</p>
-      </div>
-      <LinkBotao href="/empresa" variante="secundario" icone="atelie">
-        Completar Dados do ateliê
-      </LinkBotao>
-    </div>
-  );
-}
-
-/** Caixa âmbar de aviso (mesmas classes da Ficha técnica e de Materiais). */
-function Aviso({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl bg-aviso-fundo p-4 text-lg text-aviso-texto">
-      <Icone nome="alerta" className="mt-0.5" />
-      <p>{children}</p>
-    </div>
-  );
-}
-
-/** As quatro opções de preço, na ordem da tela, com a frase de cada uma. */
-const OPCOES_PRECO: { valor: OpcaoPreco; rotulo: string; frase: string }[] = [
-  { valor: "minimo", rotulo: "Mínimo", frase: "Abaixo disso, você perde dinheiro." },
-  { valor: "justo", rotulo: "Justo", frase: "Paga seu tempo, os custos e a margem ideal." },
-  {
-    valor: "sugerido",
-    rotulo: "Sugerido",
-    frase: "O justo com o valor da sua marca e da exclusividade.",
-  },
-  { valor: "outro", rotulo: "Outro valor", frase: "Digite o preço que você quer cobrar." },
-];
+/** As quatro opções de preço, na ordem da tela (textos em TEXTOS_PRECO). */
+const OPCOES_PRECO: { valor: OpcaoPreco; rotulo: string; frase: string }[] = (
+  ["minimo", "justo", "sugerido", "outro"] as const
+).map((valor) => ({ valor, ...TEXTOS_PRECO[valor] }));
 
 /** Valor mostrado no cartão (o "Outro valor" não tem valor calculado). */
 function valorDaOpcao(opcao: OpcaoPreco, precos: Precos): number | null {
   return opcao === "outro" ? null : precos[opcao];
-}
-
-/** Uma linha do "Como chegamos ao custo". */
-function Linha({ rotulo, valor }: { rotulo: string; valor: number }) {
-  return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-borda py-3">
-      <dt className="text-lg text-texto">{rotulo}</dt>
-      <dd className="text-lg font-bold text-texto">{formatarMoeda(valor)}</dd>
-    </div>
-  );
 }
 
 /** Painel de preço: tudo recalculado pelo motor a cada desenho; a escolha é gravada pela página. */
@@ -115,7 +66,7 @@ export function PainelPreco({
   try {
     resultado = calcularPrecoProduto(produto, itens, atelie);
   } catch (erro) {
-    erroPreco = mensagemDoErro(erro);
+    erroPreco = mensagemDoErroPreco(erro);
     erroDoMotor = erro instanceof ErroPrecificacao;
   }
 
@@ -177,7 +128,7 @@ export function PainelPreco({
     try {
       meta = calcularMetaProduto(precoEscolhido, resultado, atelie);
     } catch (erro) {
-      erroMeta = mensagemDoErro(erro);
+      erroMeta = mensagemDoErroPreco(erro);
     }
   }
 
@@ -212,33 +163,7 @@ export function PainelPreco({
 
         {resultado && (
           <>
-            <div className="rounded-2xl bg-destaque-suave px-4 py-4 text-destaque-escuro">
-              <p className="text-lg">Valor da sua hora</p>
-              <p className="text-2xl font-bold">{formatarMoeda(resultado.valorHora)}</p>
-            </div>
-
-            <div>
-              <h3 className="mb-1 text-lg font-bold text-texto">Como chegamos ao custo</h3>
-              <dl>
-                {fisico && <Linha rotulo="Materiais" valor={resultado.custo.custoMateriais} />}
-                <Linha rotulo="Tempo" valor={resultado.custo.valorTempo} />
-                <Linha
-                  rotulo="Adicional de complexidade"
-                  valor={resultado.custo.adicionalComplexidade}
-                />
-                {fisico && <Linha rotulo="Embalagem" valor={resultado.custo.embalagem} />}
-                <Linha
-                  rotulo={fisico ? "Outros gastos da peça" : "Apostila ou material entregue"}
-                  valor={resultado.custo.extras}
-                />
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-3">
-                  <dt className="text-xl font-bold text-texto">Custo da peça</dt>
-                  <dd className="text-xl font-bold text-texto">
-                    {formatarMoeda(resultado.custo.custoTotal)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
+            <CustoDetalhado resultado={resultado} fisico={fisico} />
 
             <p className="text-lg text-texto">
               {precoSalvo !== null ? (
@@ -336,25 +261,7 @@ export function PainelPreco({
             </div>
 
             {!semMeta && precoEscolhido !== null && (
-              <div className="rounded-2xl border border-borda bg-fundo p-4 text-lg text-texto">
-                {meta ? (
-                  <>
-                    <p>
-                      Para chegar à sua meta, venda{" "}
-                      <strong>
-                        {meta.pecasPorMes} {meta.pecasPorMes === 1 ? "peça" : "peças"}
-                      </strong>{" "}
-                      por mês.
-                    </p>
-                    <p className="mt-1">
-                      Você ganha <strong>{formatarMoeda(meta.ganhoPorPeca)}</strong> em cada
-                      peça.
-                    </p>
-                  </>
-                ) : (
-                  <p>{erroMeta}</p>
-                )}
-              </div>
+              <MetaDoMes meta={meta} erroMeta={erroMeta} />
             )}
           </>
         )}

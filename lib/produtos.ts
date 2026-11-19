@@ -256,6 +256,17 @@ export function precoAbaixoDoMinimo(preco: number, minimo: number): boolean {
 
 export type OpcaoPreco = "minimo" | "justo" | "sugerido" | "outro";
 
+/** Rótulo e frase de cada preço, usados pelo painel do produto e pelo Cálculo rápido. */
+export const TEXTOS_PRECO: Record<OpcaoPreco, { rotulo: string; frase: string }> = {
+  minimo: { rotulo: "Mínimo", frase: "Abaixo disso, você perde dinheiro." },
+  justo: { rotulo: "Justo", frase: "Paga seu tempo, os custos e a margem ideal." },
+  sugerido: {
+    rotulo: "Sugerido",
+    frase: "O justo com o valor da sua marca e da exclusividade.",
+  },
+  outro: { rotulo: "Outro valor", frase: "Digite o preço que você quer cobrar." },
+};
+
 /** Há um valor em reais utilizável (número finito e maior que zero). */
 function temValor(valor: number | null): valor is number {
   return valor !== null && Number.isFinite(valor) && valor > 0;
