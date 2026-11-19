@@ -8,8 +8,10 @@ import { FormularioProduto } from "@/components/produtos/FormularioProduto";
 import { PainelPreco } from "@/components/produtos/PainelPreco";
 import { useAvisos } from "@/components/ui/Avisos";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
 import { Cartao } from "@/components/ui/Cartao";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LinkBotao } from "@/components/ui/LinkBotao";
@@ -27,12 +29,15 @@ import {
 } from "@/services/atelie.service";
 import { getMateriais, type Material } from "@/services/materiais.service";
 import {
+  arquivarProduto,
   codigoDoErro,
   createCategoriaProduto,
+  deleteProduto,
   getCategoriasProduto,
   getFichaTecnica,
   getProdutoById,
   mensagemErroProduto,
+  reativarProduto,
   salvarPrecoProduto,
   updateProduto,
   type CategoriaProduto,
@@ -72,6 +77,9 @@ export default function EditarProdutoPage() {
   const [atelie, setAtelie] = useState<ConfiguracoesAtelie | null>(null);
   const [estadoAtelie, setEstadoAtelie] = useState<EstadoAtelie>("carregando");
   const [tentativaAtelie, setTentativaAtelie] = useState(0);
+  /* Cartão "Arquivar ou excluir" (mesmo padrão de Materiais). */
+  const [dialogo, setDialogo] = useState<"arquivar" | "excluir" | null>(null);
+  const [processando, setProcessando] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -213,6 +221,80 @@ export default function EditarProdutoPage() {
     }
   }
 
+  /** Confere a sessão antes de arquivar, desarquivar ou excluir. */
+  async function sessaoAtiva(): Promise<boolean> {
+    const {
+      data: { user },
+    } = await createClient().auth.getUser();
+
+    if (user) return true;
+
+    setDialogo(null);
+    avisar({ tipo: "erro", texto: "Sua sessão expirou. Entre novamente para continuar." });
+    return false;
+  }
+
+  /** Arquiva (ativo = false) ou desarquiva (ativo = true), sem recarregar a página. */
+  async function mudarAtivo(ativo: boolean) {
+    if (!produto || processando) return;
+    setProcessando(true);
+
+    try {
+      if (!(await sessaoAtiva())) return;
+
+      if (ativo) {
+        await reativarProduto(produto.id);
+      } else {
+        await arquivarProduto(produto.id);
+      }
+
+      /* Fecha o diálogo antes do aviso (o diálogo cobre a tela). */
+      setDialogo(null);
+      setProduto((atual) => (atual ? { ...atual, ativo } : atual));
+      avisar({
+        tipo: "sucesso",
+        texto: ativo ? "Produto desarquivado." : "Produto arquivado.",
+      });
+    } catch (erro) {
+      setDialogo(null);
+      avisar({
+        tipo: "erro",
+        texto:
+          mensagemErroProduto(erro) ??
+          (ativo
+            ? "Não foi possível desarquivar o produto. Tente de novo."
+            : "Não foi possível arquivar o produto. Tente de novo."),
+      });
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  async function excluir() {
+    if (!produto || processando) return;
+    setProcessando(true);
+
+    try {
+      if (!(await sessaoAtiva())) return;
+
+      await deleteProduto(produto.id);
+
+      setDialogo(null);
+      avisar({ tipo: "sucesso", texto: "Produto excluído." });
+      router.push("/produtos");
+    } catch (erro) {
+      setDialogo(null);
+      avisar({
+        tipo: "erro",
+        /* Inclui PRODUTO_EM_PEDIDO (produto em pedidos ou orçamentos). */
+        texto:
+          mensagemErroProduto(erro) ?? "Não foi possível excluir o produto. Tente de novo.",
+      });
+    } finally {
+      setProcessando(false);
+    }
+  }
+
   const voltar = (
     <LinkBotao href="/produtos" variante="discreto" icone="voltar" className="mb-4 -ml-3">
       Voltar para Produtos
@@ -300,12 +382,76 @@ export default function EditarProdutoPage() {
               />
             )}
 
+            <Cartao titulo="Arquivar ou excluir">
+              <p className="mb-4 text-lg text-texto-suave">
+                {produto.ativo
+                  ? "Arquivar tira o produto da lista e dos pedidos novos. Você pode desarquivar quando quiser. Excluir apaga o produto de vez."
+                  : "Produto arquivado: não aparece na lista nem para novos pedidos."}
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {produto.ativo ? (
+                  <Button
+                    variante="secundario"
+                    disabled={processando}
+                    onClick={() => setDialogo("arquivar")}
+                    className="w-full sm:w-auto"
+                  >
+                    Arquivar
+                  </Button>
+                ) : (
+                  <Button
+                    variante="secundario"
+                    carregando={processando && dialogo === null}
+                    disabled={processando}
+                    onClick={() => mudarAtivo(true)}
+                    className="w-full sm:w-auto"
+                  >
+                    Desarquivar
+                  </Button>
+                )}
+
+                <Button
+                  variante="perigo"
+                  icone="excluir"
+                  disabled={processando}
+                  onClick={() => setDialogo("excluir")}
+                  className="w-full sm:w-auto"
+                >
+                  Excluir
+                </Button>
+              </div>
+            </Cartao>
+
             <div>
               <LinkBotao href="/produtos" variante="secundario" icone="voltar">
                 Voltar para Produtos
               </LinkBotao>
             </div>
           </div>
+
+          <ConfirmDialog
+            aberto={dialogo === "arquivar"}
+            titulo="Arquivar produto?"
+            mensagem="O produto sai da lista e não aparece para novos pedidos. Nada é apagado."
+            textoConfirmar="Arquivar"
+            textoCancelar="Não arquivar"
+            variante="primario"
+            carregando={processando}
+            aoConfirmar={() => mudarAtivo(false)}
+            aoCancelar={() => setDialogo(null)}
+          />
+
+          <ConfirmDialog
+            aberto={dialogo === "excluir"}
+            titulo="Excluir produto?"
+            mensagem="A ficha técnica e o preço deste produto também serão apagados. Isso não pode ser desfeito."
+            textoConfirmar="Excluir"
+            textoCancelar="Não excluir"
+            variante="perigo"
+            carregando={processando}
+            aoConfirmar={excluir}
+            aoCancelar={() => setDialogo(null)}
+          />
         </>
       )}
     </div>
