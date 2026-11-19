@@ -1,269 +1,81 @@
 "use client";
 
-import { formatarMoeda } from "@/lib/formatar";
+import { useEffect, useState } from "react";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
+import { Cartao } from "@/components/ui/Cartao";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { LinkBotao } from "@/components/ui/LinkBotao";
+import { Loading } from "@/components/ui/Loading";
+import { getMateriais } from "@/services/materiais.service";
+import { getProdutos } from "@/services/produtos.service";
 
-import { createClient } from "@/lib/supabase/client";
+type Estado = "carregando" | "erro" | "pronto";
 
-import { DashboardCard } from "@/components/DashboardCard";
-
-import { FinancialEvolutionChart } from "@/components/dashboard/FinancialEvolutionChart";
-
-type Product = {
-  id: number;
-  nome: string;
-  preco_sugerido: number;
-  complexidade: number;
-  exclusividade: number;
-  nivel_tecnico: number;
-};
-
-type Material = {
-  id: number;
-};
-
-export default function Dashboard() {
-  const supabase = createClient();
-  const [loading, setLoading] =
-    useState(true);
-
-  const [products, setProducts] =
-    useState<Product[]>([]);
-
-  const [materials, setMaterials] =
-    useState<Material[]>([]);
-
-  async function carregarDados() {
-    try {
-      setLoading(true);
-
-      const [
-        productsResponse,
-        materialsResponse,
-      ] = await Promise.all([
-        supabase
-          .from("products")
-          .select("*"),
-
-        supabase
-          .from("materials")
-          .select("*"),
-      ]);
-
-      if (
-        productsResponse.error
-      ) {
-        console.log(
-          productsResponse.error
-        );
-      }
-
-      if (
-        materialsResponse.error
-      ) {
-        console.log(
-          materialsResponse.error
-        );
-      }
-
-      setProducts(
-        productsResponse.data ||
-          []
-      );
-
-      setMaterials(
-        materialsResponse.data ||
-          []
-      );
-    } catch (error) {
-      console.log(error);
-
-      alert(
-        "Erro ao carregar dashboard"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+/* Início mínimo (Etapa 8, H5): só os totais de produtos e materiais ativos.
+   O Início motivacional, com os números do negócio, vem numa fase própria. */
+export default function InicioPage() {
+  const [estado, setEstado] = useState<Estado>("carregando");
+  const [tentativa, setTentativa] = useState(0);
+  const [totalProdutos, setTotalProdutos] = useState(0);
+  const [totalMateriais, setTotalMateriais] = useState(0);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    let ativo = true;
 
-  const totalProdutos =
-    products.length;
+    Promise.all([getProdutos(), getMateriais()])
+      .then(([produtos, materiais]) => {
+        if (!ativo) return;
+        setTotalProdutos(produtos.filter((p) => p.ativo).length);
+        /* Material sem valor em "ativo" (linhas antigas) conta como ativo. */
+        setTotalMateriais(materiais.filter((m) => m.ativo !== false).length);
+        setEstado("pronto");
+      })
+      .catch(() => {
+        if (ativo) setEstado("erro");
+      });
 
-  const totalMateriais =
-    materials.length;
+    return () => {
+      ativo = false;
+    };
+  }, [tentativa]);
 
-  const faturamentoPotencial =
-    useMemo(() => {
-      return products.reduce(
-        (acc, item) =>
-          acc +
-          Number(
-            item.preco_sugerido ||
-              0
-          ),
-        0
-      );
-    }, [products]);
-
-  const scoreMedio =
-    useMemo(() => {
-      if (
-        products.length === 0
-      )
-        return 0;
-
-      const total =
-        products.reduce(
-          (acc, product) => {
-            const score =
-              product.complexidade *
-                10 +
-              product.exclusividade *
-                10 +
-              product.nivel_tecnico *
-                12;
-
-            return acc + score;
-          },
-          0
-        );
-
-      return Math.round(
-        total / products.length
-      );
-    }, [products]);
-
-  const produtosPremium =
-    useMemo(() => {
-      return products.filter(
-        (product) => {
-          const score =
-            product.complexidade *
-              10 +
-            product.exclusividade *
-              10 +
-            product.nivel_tecnico *
-              12;
-
-          return score >= 70;
-        }
-      ).length;
-    }, [products]);
-
-  const evolutionData =
-    useMemo(() => {
-      return products.map(
-        (product) => ({
-          nome: product.nome,
-          precoSugerido:
-            Number(
-              product.preco_sugerido ||
-                0
-            ),
-        })
-      );
-    }, [products]);
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gray-100 p-4 md:p-8">
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          Carregando dashboard...
-        </div>
-      </main>
-    );
+  function tentarDeNovo() {
+    setEstado("carregando");
+    setTentativa((n) => n + 1);
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 p-4 md:p-8">
-      <div className="mb-10">
-        <h1 className="text-3xl font-black text-slate-900 md:text-5xl">
-          Dashboard
-        </h1>
+    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
+      <CabecalhoPagina titulo="Início" subtitulo="Um resumo do seu ateliê." />
 
-        <p className="mt-3 text-base text-slate-500 md:text-xl">
-          Visão estratégica artesanal 🚀
-        </p>
-      </div>
+      {estado === "carregando" && <Loading texto="Carregando o resumo..." />}
 
-      <section className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <DashboardCard
-          title="Produtos"
-          value={String(
-            totalProdutos
-          )}
-        />
+      {estado === "erro" && <ErrorState aoTentarDeNovo={tentarDeNovo} />}
 
-        <DashboardCard
-          title="Materiais"
-          value={String(
-            totalMateriais
-          )}
-        />
+      {estado === "pronto" && (
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Cartao titulo="Produtos">
+            <p className="text-4xl font-bold text-texto">{totalProdutos}</p>
+            <p className="mt-1 text-lg text-texto-suave">
+              {totalProdutos === 1 ? "produto ativo" : "produtos ativos"}
+            </p>
+            <LinkBotao href="/produtos" variante="secundario" icone="avancar" className="mt-4">
+              Ver produtos
+            </LinkBotao>
+          </Cartao>
 
-        <DashboardCard
-          title="Produtos Premium"
-          value={String(
-            produtosPremium
-          )}
-        />
-
-        <DashboardCard
-          title="Score Médio"
-          value={`${scoreMedio}/100`}
-        />
-      </section>
-
-      <section className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="mb-3 text-sm text-slate-500">
-            Faturamento Potencial
-          </p>
-
-          <h2 className="text-5xl font-black text-green-600">
-            {formatarMoeda(
-              faturamentoPotencial
-            )}
-          </h2>
-
-          <p className="mt-4 text-sm text-slate-500">
-            Soma de todos os preços
-            sugeridos da plataforma
-          </p>
+          <Cartao titulo="Materiais">
+            <p className="text-4xl font-bold text-texto">{totalMateriais}</p>
+            <p className="mt-1 text-lg text-texto-suave">
+              {totalMateriais === 1 ? "material ativo" : "materiais ativos"}
+            </p>
+            <LinkBotao href="/materiais" variante="secundario" icone="avancar" className="mt-4">
+              Ver materiais
+            </LinkBotao>
+          </Cartao>
         </div>
-
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="mb-3 text-sm text-slate-500">
-            Performance Artesanal
-          </p>
-
-          <h2 className="text-5xl font-black text-orange-500">
-            {scoreMedio >= 70
-              ? "🔥"
-              : scoreMedio >= 50
-              ? "⭐"
-              : "✨"}
-          </h2>
-
-          <p className="mt-4 text-sm text-slate-500">
-            Baseado na valorização
-            média dos produtos
-          </p>
-        </div>
-      </section>
-
-      <FinancialEvolutionChart
-        data={evolutionData}
-      />
-    </main>
+      )}
+    </div>
   );
 }

@@ -36,8 +36,6 @@ const grupos: GrupoMenu[] = [
     titulo: "Produtos",
     itens: [
       { rotulo: "Produtos", href: "/produtos", icone: "produtos" },
-      { rotulo: "Preço do produto", href: "/calculadora", icone: "etiqueta" },
-      { rotulo: "Cálculo rápido", href: "/calculadora-rapida", icone: "calculadora" },
     ],
   },
   {

@@ -7,8 +7,8 @@ interface CabecalhoPaginaProps {
   acao?: ReactNode;
 }
 
-/* Cabeçalho do visual novo. O PageHeader.tsx antigo continua em uso
-   nas telas atuais e será substituído quando elas forem refeitas. */
+/* Cabeçalho do visual novo, usado por todas as telas refeitas
+   (o PageHeader.tsx antigo foi excluído na Etapa 8). */
 export function CabecalhoPagina({
   titulo,
   subtitulo,

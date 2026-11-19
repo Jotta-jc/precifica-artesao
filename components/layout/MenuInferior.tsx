@@ -18,19 +18,12 @@ interface ItemBarra {
 const itensBarra: ItemBarra[] = [
   { rotulo: "Início", href: "/dashboard", icone: "inicio" },
   { rotulo: "Materiais", href: "/materiais", icone: "materiais", tambem: ["/estoque"] },
-  {
-    rotulo: "Produtos",
-    href: "/produtos",
-    icone: "produtos",
-    tambem: ["/calculadora", "/calculadora-rapida"],
-  },
+  { rotulo: "Produtos", href: "/produtos", icone: "produtos" },
   { rotulo: "Vendas", href: "/pedidos", icone: "vendas", tambem: ["/clientes"] },
 ];
 
 const itensMais: { rotulo: string; href: string; icone: NomeIcone }[] = [
   { rotulo: "Estoque", href: "/estoque", icone: "compra" },
-  { rotulo: "Preço do produto", href: "/calculadora", icone: "etiqueta" },
-  { rotulo: "Cálculo rápido", href: "/calculadora-rapida", icone: "calculadora" },
   { rotulo: "Clientes", href: "/clientes", icone: "conversa" },
   { rotulo: "Dados do ateliê", href: "/empresa", icone: "atelie" },
 ];

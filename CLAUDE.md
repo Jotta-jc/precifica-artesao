@@ -73,7 +73,6 @@ Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 | tailwindcss | 4.3.0 (configurado via CSS, sem tailwind.config.js) |
 | @supabase/supabase-js | 2.105.4 |
 | @supabase/ssr | 0.10.3 |
-| recharts | 3.8.1 |
 | eslint | 9.39.4 |
 
 - **Não instalados:** Zod, TanStack Table, React Hook Form e qualquer biblioteca de testes. Se precisar, avise; não instale. O Zod aparece em node_modules apenas como peça interna do ESLint; não é dependência do projeto e não deve ser importado sem autorização.
@@ -93,20 +92,22 @@ Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 app/          páginas e rotas (App Router)
 components/   componentes
   crud/ forms/ ui/   em grande parte ARQUIVOS VAZIOS (reservados para o futuro kit visual)
-  products/   componentes de produto em uso
+  produtos/   componentes de produto em uso (FormularioProduto, FichaTecnica, PainelPreco)
 lib/supabase/ client.ts (navegador) e server.ts (servidor)
 services/     acesso a dados; vários arquivos ainda vazios
 types/        tipos; vários arquivos ainda vazios
 middleware.ts proteção de rotas
 ```
 
-Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora`, `/calculadora-rapida`, `/configuracoes`.
+Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`.
+
+Telas antigas desligadas na Etapa 8 (o endereço só redireciona): `/calculadora` e `/calculadora-rapida` → `/produtos`; `/configuracoes` → `/empresa`. O "Cálculo rápido" volta reescrito com o motor depois.
 
 Fatos importantes:
 
 - O layout raiz é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador.
 - A página `/` só redireciona para `/dashboard` (quem não está logado vai antes para `/login` pelo middleware).
-- Existe apenas `components/products/` (não existe `components/produtos/`).
+- Os componentes de produto ficam em `components/produtos/` (a pasta antiga `components/products/` foi removida na Etapa 8).
 - Há cerca de 80 `console.*` de diagnóstico e 36 erros de lint. Não corrija fora do escopo do prompt.
 
 ---
@@ -149,8 +150,8 @@ alter table public.nome_tabela enable row level security;
 | `material_movements` | `tipo` aceita só `entrada`, `saida`, `ajuste` |
 | `material_categories` | coluna `nome` (não `name`); 16 categorias de teste já cadastradas — não reinserir |
 | `business_metrics` | uma linha por usuária (`user_id` único); valor/hora |
-| `pricing_settings` | gravada pela tela "Configurações IA", mas não usada em nenhum cálculo |
-| `knowledge_settings`, `profit_levels` | globais; o código carrega mas não usa |
+| `pricing_settings` | não usada; a tela antiga que gravava nela (`/configuracoes`) foi desligada na Etapa 8 |
+| `knowledge_settings`, `profit_levels` | globais; o código não usa mais (as calculadoras antigas foram desligadas na Etapa 8) |
 
 ### Tabelas que existem mas o código não usa
 
@@ -183,7 +184,7 @@ As telas de clientes, produtos e materiais tratam o código `23503` com mensagem
 - Editar o cadastro de um material **nunca** altera o estoque. O estoque só muda por movimentações (`material_movements`).
 - A fórmula de preço existe hoje em 4 versões diferentes no código. **Não crie uma quinta.** A metodologia oficial será decidida pelo proprietário.
 - Margem e markup são diferentes. Margem é sobre o preço de venda; markup é sobre o custo.
-- "Configurações IA" e "Calculadora Inteligente" não usam IA. Não prometa IA na interface.
+- Não prometa IA na interface. As telas antigas "Configurações IA" e "Calculadora Inteligente", que não usavam IA, foram desligadas na Etapa 8.
 - **Vitrine pública (Jornada 3):** o visitante (`anon`) continua SEM acesso às tabelas. A vitrine lerá apenas uma função ou view própria que entrega só os campos públicos (nome, descrição, foto, categoria, preço ou "sob consulta", prazo) dos produtos marcados como publicados, e os dados de contato do ateliê. Nunca expõe custo, margem, materiais, estoque, clientes ou pedidos. Essa exceção será desenhada e revisada em tarefa própria; não libere acesso de `anon` a tabelas para "resolver" a vitrine.
 - **Jornada 1 — Materiais (decidido em 17/11/2026):** categorias de material vêm da lista própria de cada artesã (tabela material_categories), com opção de criar novas; unidade de USO escolhida numa lista fixa (grama, quilo, metro, centímetro, mililitro, litro, unidade, par) e a artesã informa quanto vem em cada compra (ex.: rolo com 150 metros), e o sistema calcula o custo por unidade de uso; estoque mínimo com aviso "Acabando"; materiais com histórico podem ser arquivados. Marca, cor, subcategoria e código de barras ficam para depois. Base no banco: migration 20261117000000 (colunas unidade_uso, quantidade_por_compra e custo_por_unidade calculado; categorias padrão para todas as contas, inclusive novas). Tela nova de materiais entregue em 17/11/2026 (grava as colunas novas e as antigas, por compatibilidade com Estoque, Produtos e Pedidos). Estoque (17/11/2026): compras, usos e correções passam pela função registrar_movimentacao_estoque (migration 20261117010000), numa operação só: compra em embalagens, custo = último preço pago, estoque negativo bloqueado. A baixa de estoque da tela de Pedidos ainda é a antiga e deve passar a usar essa função na Jornada 3.
 
