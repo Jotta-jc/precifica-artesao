@@ -381,7 +381,10 @@ async function salvarPedido() {
       Selecione um produto
     </option>
 
-    {produtos.map(
+    {/* Só ativos na escolha. A consulta traz todos (arquivados também). */}
+    {produtos
+      .filter((produto) => produto.ativo !== false)
+      .map(
       (produto) => (
         <option
           key={produto.id}

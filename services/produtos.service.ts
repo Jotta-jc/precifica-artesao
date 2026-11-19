@@ -30,7 +30,8 @@ export type CodigoErroProduto =
   | "MATERIAL_ARQUIVADO"
   | "ITEM_NAO_ENCONTRADO"
   | "QUANTIDADE_INVALIDA"
-  | "PRECO_INVALIDO";
+  | "PRECO_INVALIDO"
+  | "PRODUTO_EM_PEDIDO";
 
 /** Erro próprio do service. Usa "code", como o erro do Supabase, para
     codigoDoErro() funcionar igual nos dois casos. */
@@ -58,7 +59,6 @@ export const MENSAGENS_ERRO_PRODUTO: Record<string, string> = {
   FT001: "Esse material não é desta conta.",
   "23505": "Esse material já está na ficha.",
   "23514": "A quantidade precisa ser maior que zero.",
-  "23503": "Este produto já foi vendido. Você pode arquivá-lo.",
   DADOS_INVALIDOS: "Confira os campos do produto.",
   AULA_COM_FICHA: "Para virar aula, tire antes os materiais da ficha técnica.",
   AULA_SEM_FICHA: "Aula não tem ficha técnica de materiais.",
@@ -68,12 +68,23 @@ export const MENSAGENS_ERRO_PRODUTO: Record<string, string> = {
   ITEM_NAO_ENCONTRADO: "Esse item não está mais na ficha.",
   QUANTIDADE_INVALIDA: "A quantidade precisa ser maior que zero.",
   PRECO_INVALIDO: "Digite um preço válido, como 120,00.",
+  PRODUTO_EM_PEDIDO:
+    "Este produto está em pedidos ou orçamentos e não pode ser excluído. Use Arquivar.",
 };
 
 /** Mensagem simples para o erro, se conhecido; senão, null. */
 export function mensagemErroProduto(erro: unknown): string | null {
   const codigo = codigoDoErro(erro);
   return codigo ? (MENSAGENS_ERRO_PRODUTO[codigo] ?? null) : null;
+}
+
+/** Gatilhos de aula do banco (migration 20261119170000) → códigos que as
+    telas já conhecem. Outros erros voltam como vieram. */
+function erroDeAula(erro: unknown): unknown {
+  const codigo = codigoDoErro(erro);
+  if (codigo === "FT002") return new ErroProduto("AULA_SEM_FICHA");
+  if (codigo === "FT003") return new ErroProduto("AULA_COM_FICHA");
+  return erro;
 }
 
 // ---------------------------------------------------------------------
@@ -196,7 +207,8 @@ export async function updateProduto(id: number, dados: DadosProduto): Promise<Pr
     .select(SELECT_PRODUTO)
     .single();
 
-  if (error) throw error;
+  /* FT003: o banco também recusa virar aula com ficha (duas abas ao mesmo tempo). */
+  if (error) throw erroDeAula(error);
 
   return normalizarProduto(data as Record<string, unknown>);
 }
@@ -254,7 +266,11 @@ export async function reativarProduto(id: number): Promise<void> {
   await definirAtivo(id, true);
 }
 
-/** Exclui o produto (a ficha vai junto). Erro 23503 = já foi vendido. */
+/**
+ * Exclui o produto (a ficha vai junto). O banco bloqueia (23503) produto
+ * que está em algum item de pedido, de qualquer status, inclusive
+ * orçamento: vira ErroProduto("PRODUTO_EM_PEDIDO").
+ */
 export async function deleteProduto(id: number): Promise<void> {
   const { data, error } = await supabase
     .from("products")
@@ -263,7 +279,10 @@ export async function deleteProduto(id: number): Promise<void> {
     .select("id")
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    if (codigoDoErro(error) === "23503") throw new ErroProduto("PRODUTO_EM_PEDIDO");
+    throw error;
+  }
   if (!data) throw new ErroProduto("PRODUTO_NAO_ENCONTRADO");
 }
 
@@ -404,7 +423,8 @@ export async function adicionarItemFicha(
     .select(SELECT_ITEM)
     .single();
 
-  if (error) throw error;
+  /* FT002: o banco também recusa ficha em aula (duas abas ao mesmo tempo). */
+  if (error) throw erroDeAula(error);
 
   return paraItemFicha(data as unknown as LinhaItem);
 }
@@ -435,7 +455,7 @@ export async function atualizarItemFicha(itemId: number, quantidade: number): Pr
     .select(SELECT_ITEM)
     .single();
 
-  if (error) throw error;
+  if (error) throw erroDeAula(error);
 
   return paraItemFicha(data as unknown as LinhaItem);
 }
