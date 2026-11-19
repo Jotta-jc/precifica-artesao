@@ -1,4 +1,5 @@
 import { abreviacaoUnidade, type UnidadeUso } from "@/lib/materiais";
+import { centavos } from "@/lib/precificacao";
 import {
   complexidadeAntiga,
   custoTotalItemCompat,
@@ -200,27 +201,37 @@ export async function updateProduto(id: number, dados: DadosProduto): Promise<Pr
   return normalizarProduto(data as Record<string, unknown>);
 }
 
-/** Grava o preço escolhido (usado nos Pedidos) e o sugerido pelo motor. */
+/**
+ * Grava o preço escolhido (usado nos Pedidos) e o sugerido do momento.
+ * Os dois são arredondados em centavos (centavos do motor) ANTES de validar:
+ * 0,004 vira 0 e é recusado. Decisão F3: preco_sugerido é sempre o sugerido
+ * do momento em que a artesã salva; quem calcula é a tela (pelo motor), o
+ * service só grava. Devolve o produto atualizado.
+ */
 export async function salvarPrecoProduto(
   id: number,
   valores: { preco: number; preco_sugerido: number }
-): Promise<void> {
+): Promise<Produto> {
+  const preco = centavos(valores.preco);
+  const precoSugerido = centavos(valores.preco_sugerido);
+
   /* Preço de venda > 0; o sugerido pode ser 0. */
-  const precoValido = Number.isFinite(valores.preco) && valores.preco > 0;
-  const sugeridoValido =
-    Number.isFinite(valores.preco_sugerido) && valores.preco_sugerido >= 0;
+  const precoValido = Number.isFinite(preco) && preco > 0;
+  const sugeridoValido = Number.isFinite(precoSugerido) && precoSugerido >= 0;
   if (!precoValido || !sugeridoValido) throw new ErroProduto("PRECO_INVALIDO");
 
   const { data, error } = await supabase
     .from("products")
-    .update({ preco: valores.preco, preco_sugerido: valores.preco_sugerido })
+    .update({ preco, preco_sugerido: precoSugerido })
     .eq("id", id)
-    .select("id")
+    .select(SELECT_PRODUTO)
     .maybeSingle();
 
   if (error) throw error;
   /* O RLS não dá erro quando nenhuma linha muda: confere se gravou. */
   if (!data) throw new ErroProduto("PRODUTO_NAO_ENCONTRADO");
+
+  return normalizarProduto(data as Record<string, unknown>);
 }
 
 async function definirAtivo(id: number, ativo: boolean): Promise<void> {

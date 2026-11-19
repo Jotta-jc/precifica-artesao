@@ -6,13 +6,16 @@ import {
   calcularPrecoProduto,
   complexidadeAntiga,
   custoDoItem,
+  custosMudaram,
   custoTotalItemCompat,
+  escolhaInicialPreco,
   exclusividadeAntiga,
   faltaTempo,
   fichaTemMaterialSemCusto,
   filtrarProdutos,
   horasPorMes,
   precoAbaixoDoMinimo,
+  precoDaEscolha,
   SEM_CATEGORIA,
   validarProduto,
   type FiltrosProdutos,
@@ -190,6 +193,91 @@ describe("faltaTempo e precoAbaixoDoMinimo", () => {
     expect(precoAbaixoDoMinimo(300, 372.31)).toBe(true);
     expect(precoAbaixoDoMinimo(372.31, 372.31)).toBe(false);
     expect(precoAbaixoDoMinimo(400, 372.31)).toBe(false);
+  });
+});
+
+/* Base da escolha do preço: os três preços do exemplo da metodologia. */
+const precosBase = { minimo: 372.31, justo: 440, sugerido: 580.8 };
+
+describe("escolhaInicialPreco", () => {
+  it.each([
+    [580.8, "sugerido"],
+    [440, "justo"],
+    [372.31, "minimo"],
+  ] as const)("preço gravado %s → %s", (gravado, opcao) => {
+    expect(escolhaInicialPreco(gravado, precosBase)).toEqual({ opcao, valorOutro: null });
+  });
+
+  it("500 → outro com 500", () => {
+    expect(escolhaInicialPreco(500, precosBase)).toEqual({ opcao: "outro", valorOutro: 500 });
+  });
+
+  it.each([null, 0])("preço gravado %s → sugerido", (gravado) => {
+    expect(escolhaInicialPreco(gravado, precosBase)).toEqual({
+      opcao: "sugerido",
+      valorOutro: null,
+    });
+  });
+
+  it("580,8000001 (sobra de ponto flutuante) → sugerido", () => {
+    expect(escolhaInicialPreco(580.8000001, precosBase).opcao).toBe("sugerido");
+  });
+
+  it("580,81 (um centavo a mais) → outro", () => {
+    expect(escolhaInicialPreco(580.81, precosBase)).toEqual({
+      opcao: "outro",
+      valorOutro: 580.81,
+    });
+  });
+
+  it("empate justo = sugerido → sugerido", () => {
+    const precos = { minimo: 372.31, justo: 440, sugerido: 440 };
+    expect(escolhaInicialPreco(440, precos).opcao).toBe("sugerido");
+  });
+
+  it("empate mínimo = justo → justo", () => {
+    const precos = { minimo: 440, justo: 440, sugerido: 580.8 };
+    expect(escolhaInicialPreco(440, precos).opcao).toBe("justo");
+  });
+});
+
+describe("precoDaEscolha", () => {
+  it.each([
+    ["minimo", 372.31],
+    ["justo", 440],
+    ["sugerido", 580.8],
+  ] as const)("%s → %s", (opcao, preco) => {
+    expect(precoDaEscolha(opcao, precosBase, null)).toBe(preco);
+  });
+
+  it("outro com 123,45 → 123,45", () => {
+    expect(precoDaEscolha("outro", precosBase, 123.45)).toBe(123.45);
+  });
+
+  it("outro vazio → null", () => {
+    expect(precoDaEscolha("outro", precosBase, null)).toBeNull();
+  });
+});
+
+describe("custosMudaram", () => {
+  it("sugerido gravado igual ao atual → false", () => {
+    expect(custosMudaram({ preco: 440, preco_sugerido: 580.8 }, 580.8)).toBe(false);
+  });
+
+  it("sugerido gravado diferente → true", () => {
+    expect(custosMudaram({ preco: 440, preco_sugerido: 580.8 }, 600)).toBe(true);
+  });
+
+  it("diferença menor que meio centavo → false", () => {
+    expect(custosMudaram({ preco: 440, preco_sugerido: 580.8 }, 580.804)).toBe(false);
+  });
+
+  it.each([null, 0])("preço gravado %s → false", (preco) => {
+    expect(custosMudaram({ preco, preco_sugerido: 580.8 }, 600)).toBe(false);
+  });
+
+  it.each([null, 0])("sugerido gravado %s → false", (preco_sugerido) => {
+    expect(custosMudaram({ preco: 440, preco_sugerido }, 600)).toBe(false);
   });
 });
 

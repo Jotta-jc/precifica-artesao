@@ -33,6 +33,7 @@ import {
   getFichaTecnica,
   getProdutoById,
   mensagemErroProduto,
+  salvarPrecoProduto,
   updateProduto,
   type CategoriaProduto,
 } from "@/services/produtos.service";
@@ -67,6 +68,7 @@ export default function EditarProdutoPage() {
   const [itens, setItens] = useState<ItemFicha[]>([]);
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [salvando, setSalvando] = useState(false);
+  const [salvandoPreco, setSalvandoPreco] = useState(false);
   const [atelie, setAtelie] = useState<ConfiguracoesAtelie | null>(null);
   const [estadoAtelie, setEstadoAtelie] = useState<EstadoAtelie>("carregando");
   const [tentativaAtelie, setTentativaAtelie] = useState(0);
@@ -182,6 +184,35 @@ export default function EditarProdutoPage() {
     }
   }
 
+  /** Grava só o preço. O formulário "Dados do produto" não é salvo nem reiniciado. */
+  async function salvarPreco(valores: { preco: number; preco_sugerido: number }) {
+    if (!produto || salvandoPreco) return;
+    setSalvandoPreco(true);
+
+    try {
+      const {
+        data: { user },
+      } = await createClient().auth.getUser();
+
+      if (!user) {
+        avisar({ tipo: "erro", texto: "Sua sessão expirou. Entre novamente para salvar." });
+        return;
+      }
+
+      const atualizado = await salvarPrecoProduto(produto.id, valores);
+
+      setProduto(atualizado);
+      avisar({ tipo: "sucesso", texto: "Preço salvo." });
+    } catch (erro) {
+      avisar({
+        tipo: "erro",
+        texto: mensagemErroProduto(erro) ?? "Não foi possível salvar o preço. Tente de novo.",
+      });
+    } finally {
+      setSalvandoPreco(false);
+    }
+  }
+
   const voltar = (
     <LinkBotao href="/produtos" variante="discreto" icone="voltar" className="mb-4 -ml-3">
       Voltar para Produtos
@@ -260,7 +291,13 @@ export default function EditarProdutoPage() {
               />
             )}
             {estadoAtelie === "pronto" && atelie && (
-              <PainelPreco produto={produto} itens={itens} atelie={atelie} />
+              <PainelPreco
+                produto={produto}
+                itens={itens}
+                atelie={atelie}
+                aoSalvarPreco={salvarPreco}
+                salvando={salvandoPreco}
+              />
             )}
 
             <div>

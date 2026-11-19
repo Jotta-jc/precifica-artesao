@@ -251,6 +251,58 @@ export function precoAbaixoDoMinimo(preco: number, minimo: number): boolean {
 }
 
 // ---------------------------------------------------------------------
+// Escolha do preço de venda
+// ---------------------------------------------------------------------
+
+export type OpcaoPreco = "minimo" | "justo" | "sugerido" | "outro";
+
+/** Há um valor em reais utilizável (número finito e maior que zero). */
+function temValor(valor: number | null): valor is number {
+  return valor !== null && Number.isFinite(valor) && valor > 0;
+}
+
+/**
+ * Opção marcada ao abrir o painel: compara o preço gravado com os três
+ * preços de agora, no mesmo centavo. Empate: sugerido, justo, mínimo.
+ * Sem preço gravado → "sugerido"; nenhum igual → "outro" com o valor gravado.
+ */
+export function escolhaInicialPreco(
+  precoGravado: number | null,
+  precos: Precos
+): { opcao: OpcaoPreco; valorOutro: number | null } {
+  if (!temValor(precoGravado)) return { opcao: "sugerido", valorOutro: null };
+
+  const gravado = centavos(precoGravado);
+  const ordem: Exclude<OpcaoPreco, "outro">[] = ["sugerido", "justo", "minimo"];
+  const igual = ordem.find((opcao) => centavos(precos[opcao]) === gravado);
+
+  return igual ? { opcao: igual, valorOutro: null } : { opcao: "outro", valorOutro: gravado };
+}
+
+/** Preço da opção marcada; em "outro", o valor digitado (null se vazio). */
+export function precoDaEscolha(
+  opcao: OpcaoPreco,
+  precos: Precos,
+  valorOutro: number | null
+): number | null {
+  return opcao === "outro" ? valorOutro : precos[opcao];
+}
+
+/**
+ * Os custos mudaram desde que o preço foi salvo: o sugerido gravado é
+ * diferente do sugerido de agora (em centavos). Sem preço gravado ou sem
+ * sugerido gravado, não há com o que comparar → false.
+ */
+export function custosMudaram(
+  produto: Pick<Produto, "preco" | "preco_sugerido">,
+  sugeridoAtual: number
+): boolean {
+  if (!temValor(produto.preco) || !temValor(produto.preco_sugerido)) return false;
+
+  return centavos(produto.preco_sugerido) !== centavos(sugeridoAtual);
+}
+
+// ---------------------------------------------------------------------
 // Filtros da lista
 // ---------------------------------------------------------------------
 
