@@ -3,6 +3,11 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import {
+  CartaoNaVitrine,
+  type DadosVitrineProduto,
+  type EstadoVitrineDoAtelie,
+} from "@/components/produtos/CartaoNaVitrine";
 import { FichaTecnica } from "@/components/produtos/FichaTecnica";
 import { FormularioProduto } from "@/components/produtos/FormularioProduto";
 import { PainelPreco } from "@/components/produtos/PainelPreco";
@@ -39,9 +44,11 @@ import {
   mensagemErroProduto,
   reativarProduto,
   salvarPrecoProduto,
+  salvarVitrineProduto,
   updateProduto,
   type CategoriaProduto,
 } from "@/services/produtos.service";
+import { buscarMinhaVitrine } from "@/services/vitrine.service";
 
 type Estado = "carregando" | "naoEncontrado" | "erro" | "pronto";
 type EstadoAtelie = "carregando" | "erro" | "pronto";
@@ -77,6 +84,11 @@ export default function EditarProdutoPage() {
   const [atelie, setAtelie] = useState<ConfiguracoesAtelie | null>(null);
   const [estadoAtelie, setEstadoAtelie] = useState<EstadoAtelie>("carregando");
   const [tentativaAtelie, setTentativaAtelie] = useState(0);
+  /* Vitrine do ateliê, à parte: a falha não bloqueia a página (o cartão só não mostra o selo). */
+  const [vitrineAtelie, setVitrineAtelie] = useState<EstadoVitrineDoAtelie>({
+    estado: "carregando",
+  });
+  const [salvandoVitrine, setSalvandoVitrine] = useState(false);
   /* Cartão "Arquivar ou excluir" (mesmo padrão de Materiais). */
   const [dialogo, setDialogo] = useState<"arquivar" | "excluir" | null>(null);
   const [processando, setProcessando] = useState(false);
@@ -133,6 +145,22 @@ export default function EditarProdutoPage() {
       ativo = false;
     };
   }, [tentativa, tentativaAtelie]);
+
+  useEffect(() => {
+    let ativo = true;
+
+    buscarMinhaVitrine()
+      .then((vitrine) => {
+        if (ativo) setVitrineAtelie({ estado: "pronto", vitrine });
+      })
+      .catch(() => {
+        if (ativo) setVitrineAtelie({ estado: "erro" });
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [tentativa]);
 
   function tentarDeNovo() {
     setEstado("carregando");
@@ -295,6 +323,35 @@ export default function EditarProdutoPage() {
     }
   }
 
+  /**
+   * Grava só os campos de vitrine do produto (o cadastro e o preço não mudam).
+   * Devolve a mensagem de erro para o cartão mostrar, ou null.
+   */
+  async function salvarVitrine(dados: DadosVitrineProduto): Promise<string | null> {
+    if (!produto || salvandoVitrine) return null;
+    setSalvandoVitrine(true);
+
+    try {
+      const {
+        data: { user },
+      } = await createClient().auth.getUser();
+
+      if (!user) return "Sua sessão expirou. Entre novamente para salvar.";
+
+      const atualizado = await salvarVitrineProduto(produto.id, dados);
+
+      setProduto(atualizado);
+      avisar({ tipo: "sucesso", texto: "Dados da vitrine salvos." });
+      return null;
+    } catch (erro) {
+      return (
+        mensagemErroProduto(erro) ?? "Não foi possível salvar os dados da vitrine. Tente de novo."
+      );
+    } finally {
+      setSalvandoVitrine(false);
+    }
+  }
+
   const voltar = (
     <LinkBotao href="/produtos" variante="discreto" icone="voltar" className="mb-4 -ml-3">
       Voltar para Produtos
@@ -381,6 +438,13 @@ export default function EditarProdutoPage() {
                 salvando={salvandoPreco}
               />
             )}
+
+            <CartaoNaVitrine
+              produto={produto}
+              vitrine={vitrineAtelie}
+              salvando={salvandoVitrine}
+              aoSalvar={salvarVitrine}
+            />
 
             <Cartao titulo="Arquivar ou excluir">
               <p className="mb-4 text-lg text-texto-suave">
