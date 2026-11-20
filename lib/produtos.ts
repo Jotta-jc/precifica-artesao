@@ -21,6 +21,7 @@ import {
   type Exclusividade,
   type Precos,
 } from "./precificacao";
+import { normalizarTexto } from "./texto";
 
 // ---------------------------------------------------------------------
 // Tipos
@@ -426,17 +427,6 @@ export interface FiltrosProdutos {
   /** "" = todos; ou o tipo. */
   tipo: "" | TipoProduto;
   mostrarArquivados: boolean;
-}
-
-/* Acentos separados pelo normalize("NFD"): faixa Unicode 0300 a 036F. */
-const ACENTOS = new RegExp(
-  `[${String.fromCharCode(0x300)}-${String.fromCharCode(0x36f)}]`,
-  "g"
-);
-
-/** Minúsculas e sem acentos, para a busca. */
-function normalizarTexto(texto: string): string {
-  return texto.normalize("NFD").replace(ACENTOS, "").toLowerCase();
 }
 
 /** Aplica busca, categoria, tipo e arquivados. Mantém a ordem recebida. */
