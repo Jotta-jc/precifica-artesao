@@ -9,6 +9,7 @@ import { AvisosProvider } from "@/components/ui/Avisos";
 const hiddenSidebarRoutes = [
   "/login",
   "/auth/callback",
+  "/v/",
 ];
 
 export function AppShell({

@@ -8,6 +8,11 @@ import {
 export async function middleware(
   request: NextRequest
 ) {
+  /* Página pública da vitrine: o visitante não tem sessão. Só "/v/" com barra. */
+  if (request.nextUrl.pathname.startsWith("/v/")) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next();
 
   const supabase =
