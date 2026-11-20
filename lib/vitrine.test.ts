@@ -178,10 +178,12 @@ describe("lerVitrinePublica", () => {
     preco: 529.62,
     prazo: "sob_encomenda",
     prazo_dias: null,
+    foto: null,
   };
   const exemplo = {
     endereco: "teste-atelie",
     nome_atelie: "Jotta Art",
+    logo: null,
     whatsapp: "41999999999",
     instagram: null,
     sobre: "Texto de teste do ateliê.",
@@ -285,6 +287,53 @@ describe("lerVitrinePublica", () => {
     expect(lerVitrinePublica({ ...exemplo, produtos })?.produtos.map((p) => p.id)).toEqual([30, 10]);
   });
 
+  describe("logo e foto (caminhos no bucket)", () => {
+    const usuaria = "0f8e7a6b-1c2d-4e5f-8a9b-0c1d2e3f4a5b";
+    const logoValido = `${usuaria}/logo-1763680000123.jpg`;
+    const fotoValida = `${usuaria}/produtos/21-1763680000123.jpg`;
+
+    it("caminhos válidos passam", () => {
+      const lida = lerVitrinePublica({
+        ...exemplo,
+        logo: logoValido,
+        produtos: [{ ...bagAleska, foto: fotoValida }],
+      });
+      expect(lida?.logo).toBe(logoValido);
+      expect(lida?.produtos[0].foto).toBe(fotoValida);
+    });
+
+    it("campos ausentes → null", () => {
+      const semLogo: Record<string, unknown> = { ...exemplo };
+      delete semLogo.logo;
+      const semFoto: Record<string, unknown> = { ...bagAleska };
+      delete semFoto.foto;
+      const lida = lerVitrinePublica({ ...semLogo, produtos: [semFoto] });
+      expect(lida?.logo).toBeNull();
+      expect(lida?.produtos[0].foto).toBeNull();
+    });
+
+    it.each([
+      ["número", 123],
+      ["texto vazio", ""],
+      ["link inteiro", `https://abc.supabase.co/storage/v1/object/public/vitrine/${fotoValida}`],
+      ["outra extensão", `${usuaria}/produtos/21-1.png`],
+      ["foto no lugar do logo", fotoValida],
+    ])("logo inválido (%s) → null", (_caso, logo) => {
+      expect(lerVitrinePublica({ ...exemplo, logo })?.logo).toBeNull();
+    });
+
+    it.each([
+      ["número", 123],
+      ["texto vazio", ""],
+      ["com espaços", ` ${fotoValida} `],
+      ["outra pasta", `${usuaria}/outra/21-1.jpg`],
+      ["logo no lugar da foto", logoValido],
+    ])("foto inválida (%s) → null", (_caso, foto) => {
+      const lida = lerVitrinePublica({ ...exemplo, produtos: [{ ...bagAleska, foto }] });
+      expect(lida?.produtos[0].foto).toBeNull();
+    });
+  });
+
   it("não muta a entrada", () => {
     const entrada = {
       ...exemplo,
@@ -321,6 +370,7 @@ describe("prazoPublico e precoPublico", () => {
     preco: 120,
     prazo: "pronta_entrega",
     prazo_dias: null,
+    foto: null,
   };
 
   it("aula → null", () => {

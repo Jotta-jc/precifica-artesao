@@ -5,6 +5,7 @@
 
 /* Caminho relativo de propósito: o Vitest roda sem o atalho "@/". */
 import { formatarMoeda, formatarTelefone } from "./formatar";
+import { caminhoFotoValido, caminhoLogoValido } from "./imagens";
 import { semAcentos } from "./texto";
 
 // ---------------------------------------------------------------------
@@ -310,12 +311,16 @@ export interface ProdutoPublico {
   /** null na aula. */
   prazo: PrazoProduto | null;
   prazo_dias: number | null;
+  /** Caminho da foto no bucket (link: linkPublicoFoto). */
+  foto: string | null;
 }
 
 /** A vitrine publicada, como a página pública recebe. */
 export interface VitrinePublica {
   endereco: string;
   nome_atelie: string | null;
+  /** Caminho do logo no bucket (link: linkPublicoFoto). */
+  logo: string | null;
   whatsapp: string;
   instagram: string | null;
   sobre: string | null;
@@ -373,6 +378,7 @@ function lerProdutoPublico(dados: unknown): ProdutoPublico | null {
     preco,
     prazo,
     prazo_dias: prazoDias,
+    foto: typeof dados.foto === "string" && caminhoFotoValido(dados.foto) ? dados.foto : null,
   };
 }
 
@@ -396,6 +402,7 @@ export function lerVitrinePublica(dados: unknown): VitrinePublica | null {
   return {
     endereco,
     nome_atelie: textoOuNull(dados.nome_atelie),
+    logo: typeof dados.logo === "string" && caminhoLogoValido(dados.logo) ? dados.logo : null,
     whatsapp,
     instagram: textoOuNull(dados.instagram),
     sobre: textoOuNull(dados.sobre),

@@ -61,6 +61,9 @@ export interface Produto {
   prazo: PrazoProduto;
   /** Só com "sob_encomenda" (1 a 365). */
   prazo_dias: number | null;
+  /** Caminho da foto no bucket "vitrine" (migration 20261120200000). Só
+      services/fotos.service.ts grava. */
+  foto: string | null;
 }
 
 /** Campos que o cadastro e a edição gravam. */

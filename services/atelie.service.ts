@@ -1,3 +1,4 @@
+import { caminhoLogoValido } from "@/lib/imagens";
 import { calcularValorHora, PADROES_PRECO, type NivelMarca } from "@/lib/precificacao";
 import { createClient } from "@/lib/supabase/client";
 import { erroFatorMarca } from "@/lib/termometro";
@@ -20,10 +21,13 @@ export interface ConfiguracoesAtelie {
   margem_ideal: number;
   marca_nivel: NivelMarca;
   marca_fator: number;
+  /** Caminho do logo no bucket "vitrine" (migration 20261120200000). Só
+      services/fotos.service.ts grava; as funções abaixo nunca o gravam. */
+  logo: string | null;
 }
 
 const COLUNAS =
-  "nome_empresa, meta_faturamento, custos_fixos_mensais, dias_trabalhados, horas_por_dia, taxas_venda, margem_minima, margem_ideal, marca_nivel, marca_fator";
+  "nome_empresa, meta_faturamento, custos_fixos_mensais, dias_trabalhados, horas_por_dia, taxas_venda, margem_minima, margem_ideal, marca_nivel, marca_fator, logo";
 
 /** Nível antigo (1 a 4), ainda lido pelas telas antigas de preço. */
 const NIVEL_MARCA_ANTIGO: Record<NivelMarca, number> = {
@@ -57,6 +61,7 @@ function normalizar(linha: Record<string, unknown>): ConfiguracoesAtelie {
     margem_ideal: Number(linha.margem_ideal ?? 0),
     marca_nivel: (linha.marca_nivel as NivelMarca) ?? "comecando",
     marca_fator: Number(linha.marca_fator ?? 1),
+    logo: typeof linha.logo === "string" && caminhoLogoValido(linha.logo) ? linha.logo : null,
   };
 }
 
@@ -91,7 +96,8 @@ export async function buscarConfiguracoesAtelie(): Promise<ConfiguracoesAtelie> 
  * Erros do motor (ErroPrecificacao) também são lançados.
  */
 export async function salvarConfiguracoesAtelie(
-  dados: ConfiguracoesAtelie
+  /* Sem o logo: esta função nunca o grava (só fotos.service.ts). */
+  dados: Omit<ConfiguracoesAtelie, "logo">
 ): Promise<void> {
   const user = await usuariaLogada();
 

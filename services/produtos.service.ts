@@ -1,3 +1,4 @@
+import { caminhoFotoValido } from "@/lib/imagens";
 import { abreviacaoUnidade, type UnidadeUso } from "@/lib/materiais";
 import { centavos } from "@/lib/precificacao";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/lib/produtos";
 import { createClient } from "@/lib/supabase/client";
 import { validarVitrineProduto, type PrazoProduto } from "@/lib/vitrine";
+import { apagarArquivoDaVitrine } from "@/services/fotos.service";
 
 /* Em caso de erro, as funções lançam o próprio erro do Supabase (com
    error.code) ou um ErroProduto (com code próprio, em letras). A mensagem
@@ -105,7 +107,7 @@ async function usuariaLogada() {
 }
 
 const SELECT_PRODUTO =
-  "id, nome, tipo, categoria_id, nivel_complexidade, nivel_exclusividade, tempo_producao, embalagem, custos_extras, preco, preco_sugerido, ativo, descricao, publicado, mostrar_preco, prazo, prazo_dias, categoria_info:product_categories(nome)";
+  "id, nome, tipo, categoria_id, nivel_complexidade, nivel_exclusividade, tempo_producao, embalagem, custos_extras, preco, preco_sugerido, ativo, descricao, publicado, mostrar_preco, prazo, prazo_dias, foto, categoria_info:product_categories(nome)";
 
 /** O banco devolve numeric como número ou texto; garante número. */
 function normalizarProduto(linha: Record<string, unknown>): Produto {
@@ -131,6 +133,7 @@ function normalizarProduto(linha: Record<string, unknown>): Produto {
       linha.prazo_dias === null || linha.prazo_dias === undefined
         ? null
         : Number(linha.prazo_dias),
+    foto: typeof linha.foto === "string" && caminhoFotoValido(linha.foto) ? linha.foto : null,
   };
 }
 
@@ -328,14 +331,16 @@ export async function reativarProduto(id: number): Promise<void> {
 /**
  * Exclui o produto (a ficha vai junto). O banco bloqueia (23503) produto
  * que está em algum item de pedido, de qualquer status, inclusive
- * orçamento: vira ErroProduto("PRODUTO_EM_PEDIDO").
+ * orçamento: vira ErroProduto("PRODUTO_EM_PEDIDO"), e nada é apagado.
+ * A foto é lida na própria exclusão (a linha excluída volta com a foto) e
+ * o arquivo só é apagado DEPOIS que a linha saiu; falha só vai para o log.
  */
 export async function deleteProduto(id: number): Promise<void> {
   const { data, error } = await supabase
     .from("products")
     .delete()
     .eq("id", id)
-    .select("id")
+    .select("id, foto")
     .maybeSingle();
 
   if (error) {
@@ -343,6 +348,10 @@ export async function deleteProduto(id: number): Promise<void> {
     throw error;
   }
   if (!data) throw new ErroProduto("PRODUTO_NAO_ENCONTRADO");
+
+  if (typeof data.foto === "string" && caminhoFotoValido(data.foto)) {
+    await apagarArquivoDaVitrine(data.foto);
+  }
 }
 
 // ---------------------------------------------------------------------
