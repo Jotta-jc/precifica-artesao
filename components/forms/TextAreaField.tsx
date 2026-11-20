@@ -19,6 +19,8 @@ interface TextAreaFieldProps {
   id?: string;
   name?: string;
   disabled?: boolean;
+  /** Mostra "N de LIMITE caracteres" abaixo do campo. Não corta o texto. */
+  limite?: number;
 }
 
 export function TextAreaField({
@@ -33,9 +35,18 @@ export function TextAreaField({
   id,
   name,
   disabled,
+  limite,
 }: TextAreaFieldProps) {
   const { idCampo, idDica, idErro, descritoPor } =
     useIdsCampo(id, dica, erro);
+
+  /* Conta como o banco (char_length) e as validações: emoji conta 1. */
+  const usados = [...valor].length;
+  const idContador = `${idCampo}-contador`;
+  const descritoComContador =
+    limite === undefined
+      ? descritoPor
+      : [descritoPor, idContador].filter(Boolean).join(" ");
 
   return (
     <div>
@@ -55,9 +66,18 @@ export function TextAreaField({
         required={obrigatorio}
         disabled={disabled}
         aria-invalid={erro ? true : undefined}
-        aria-describedby={descritoPor}
+        aria-describedby={descritoComContador}
         className={`${classeCaixa(erro)} resize-y`}
       />
+
+      {limite !== undefined && (
+        <p
+          id={idContador}
+          className={`mt-2 text-base ${usados > limite ? "font-bold text-perigo" : "text-texto-suave"}`}
+        >
+          {usados} de {limite} caracteres
+        </p>
+      )}
 
       <MensagensCampo
         idDica={idDica}

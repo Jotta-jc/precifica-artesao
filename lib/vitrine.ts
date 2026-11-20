@@ -36,6 +36,12 @@ export interface RascunhoVitrine {
 
 export type ErrosVitrine = Partial<Record<"endereco" | "whatsapp" | "instagram" | "sobre", string>>;
 
+/** Erros dos campos de vitrine de um produto. */
+export interface ErrosVitrineProduto {
+  descricao?: string;
+  prazo_dias?: string;
+}
+
 // ---------------------------------------------------------------------
 // Endereço (/v/<endereco>)
 // ---------------------------------------------------------------------
@@ -228,6 +234,29 @@ export function validarPrazo(prazo: PrazoProduto, prazoDias: number | null): str
     return "Use um número de dias de 1 a 365.";
   }
   return null;
+}
+
+/**
+ * Campos de vitrine de um produto. Sem prazo (aula: a tela não manda),
+ * os dias não são conferidos. Com "pronta_entrega", os dias são ignorados
+ * (o service grava null).
+ */
+export function validarVitrineProduto(dados: {
+  descricao: string;
+  prazo?: PrazoProduto;
+  prazo_dias: number | null;
+}): ErrosVitrineProduto {
+  const erros: ErrosVitrineProduto = {};
+
+  const erroDescricao = validarDescricao(dados.descricao.trim());
+  if (erroDescricao) erros.descricao = erroDescricao;
+
+  if (dados.prazo === "sob_encomenda") {
+    const erroPrazo = validarPrazo("sob_encomenda", dados.prazo_dias);
+    if (erroPrazo) erros.prazo_dias = erroPrazo;
+  }
+
+  return erros;
 }
 
 // ---------------------------------------------------------------------

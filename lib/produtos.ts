@@ -22,6 +22,7 @@ import {
   type Precos,
 } from "./precificacao";
 import { normalizarTexto } from "./texto";
+import type { PrazoProduto } from "./vitrine";
 
 // ---------------------------------------------------------------------
 // Tipos
@@ -52,6 +53,14 @@ export interface Produto {
   ativo: boolean;
   /** Nome da categoria (vem da ligação categoria_id). */
   categoria_info: { nome: string } | null;
+  /* Vitrine (migration 20261120090000). */
+  descricao: string | null;
+  publicado: boolean;
+  /** false = "Preço sob consulta". */
+  mostrar_preco: boolean;
+  prazo: PrazoProduto;
+  /** Só com "sob_encomenda" (1 a 365). */
+  prazo_dias: number | null;
 }
 
 /** Campos que o cadastro e a edição gravam. */

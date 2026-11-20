@@ -11,6 +11,7 @@ import {
   type Produto,
 } from "@/lib/produtos";
 import { createClient } from "@/lib/supabase/client";
+import { validarVitrineProduto, type PrazoProduto } from "@/lib/vitrine";
 
 /* Em caso de erro, as funções lançam o próprio erro do Supabase (com
    error.code) ou um ErroProduto (com code próprio, em letras). A mensagem
@@ -104,7 +105,7 @@ async function usuariaLogada() {
 }
 
 const SELECT_PRODUTO =
-  "id, nome, tipo, categoria_id, nivel_complexidade, nivel_exclusividade, tempo_producao, embalagem, custos_extras, preco, preco_sugerido, ativo, categoria_info:product_categories(nome)";
+  "id, nome, tipo, categoria_id, nivel_complexidade, nivel_exclusividade, tempo_producao, embalagem, custos_extras, preco, preco_sugerido, ativo, descricao, publicado, mostrar_preco, prazo, prazo_dias, categoria_info:product_categories(nome)";
 
 /** O banco devolve numeric como número ou texto; garante número. */
 function normalizarProduto(linha: Record<string, unknown>): Produto {
@@ -119,6 +120,17 @@ function normalizarProduto(linha: Record<string, unknown>): Produto {
         ? null
         : Number(linha.preco_sugerido),
     ativo: linha.ativo !== false,
+    descricao:
+      typeof linha.descricao === "string" && linha.descricao.trim() !== ""
+        ? linha.descricao
+        : null,
+    publicado: linha.publicado === true,
+    mostrar_preco: linha.mostrar_preco !== false,
+    prazo: linha.prazo === "sob_encomenda" ? "sob_encomenda" : "pronta_entrega",
+    prazo_dias:
+      linha.prazo_dias === null || linha.prazo_dias === undefined
+        ? null
+        : Number(linha.prazo_dias),
   };
 }
 
@@ -210,6 +222,52 @@ export async function updateProduto(id: number, dados: DadosProduto): Promise<Pr
 
   /* FT003: o banco também recusa virar aula com ficha (duas abas ao mesmo tempo). */
   if (error) throw erroDeAula(error);
+
+  return normalizarProduto(data as Record<string, unknown>);
+}
+
+/**
+ * Grava só os campos de vitrine do produto (o cadastro não muda).
+ * Descrição sem espaços nas pontas (vazia → null). Prazo só é gravado se
+ * vier (aula: a tela não manda); com "pronta_entrega", os dias viram null.
+ * products não tem updated_at, como no updateProduto.
+ */
+export async function salvarVitrineProduto(
+  id: number,
+  dados: {
+    publicado: boolean;
+    descricao: string;
+    mostrar_preco: boolean;
+    prazo?: PrazoProduto;
+    prazo_dias: number | null;
+  }
+): Promise<Produto> {
+  if (Object.keys(validarVitrineProduto(dados)).length > 0) {
+    throw new ErroProduto("DADOS_INVALIDOS");
+  }
+
+  const descricao = dados.descricao.trim();
+  const colunas: Record<string, unknown> = {
+    publicado: dados.publicado,
+    mostrar_preco: dados.mostrar_preco,
+    descricao: descricao === "" ? null : descricao,
+  };
+
+  if (dados.prazo) {
+    colunas.prazo = dados.prazo;
+    colunas.prazo_dias = dados.prazo === "pronta_entrega" ? null : dados.prazo_dias;
+  }
+
+  const { data, error } = await supabase
+    .from("products")
+    .update(colunas)
+    .eq("id", id)
+    .select(SELECT_PRODUTO)
+    .maybeSingle();
+
+  if (error) throw error;
+  /* O RLS não dá erro quando nenhuma linha muda: confere se gravou. */
+  if (!data) throw new ErroProduto("PRODUTO_NAO_ENCONTRADO");
 
   return normalizarProduto(data as Record<string, unknown>);
 }

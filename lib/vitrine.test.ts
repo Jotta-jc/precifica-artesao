@@ -19,6 +19,7 @@ import {
   validarPrazo,
   validarSobre,
   validarVitrine,
+  validarVitrineProduto,
   validarWhatsapp,
 } from "./vitrine";
 
@@ -206,6 +207,39 @@ describe("produto na vitrine", () => {
     expect(validarPrazo("pronta_entrega", 10)).toBe(
       "O prazo em dias só vale para Sob encomenda."
     );
+  });
+});
+
+describe("validarVitrineProduto", () => {
+  it("descrição: 1000 ok, 1001 erro", () => {
+    expect(
+      validarVitrineProduto({ descricao: "a".repeat(1000), prazo: "pronta_entrega", prazo_dias: null })
+    ).toEqual({});
+    expect(
+      validarVitrineProduto({ descricao: "a".repeat(1001), prazo: "pronta_entrega", prazo_dias: null })
+    ).toEqual({ descricao: "Use até 1000 caracteres." });
+  });
+
+  it("descrição só com espaços é válida", () => {
+    expect(validarVitrineProduto({ descricao: "     ", prazo: "pronta_entrega", prazo_dias: null })).toEqual({});
+  });
+
+  it.each([null, 1, 365])("sob encomenda com %s dias → ok", (dias) => {
+    expect(validarVitrineProduto({ descricao: "", prazo: "sob_encomenda", prazo_dias: dias })).toEqual({});
+  });
+
+  it.each([0, 366, 1.5])("sob encomenda com %s dias → erro", (dias) => {
+    expect(validarVitrineProduto({ descricao: "", prazo: "sob_encomenda", prazo_dias: dias })).toEqual({
+      prazo_dias: "Use um número de dias de 1 a 365.",
+    });
+  });
+
+  it("pronta entrega com dias preenchidos é válido (o service grava null)", () => {
+    expect(validarVitrineProduto({ descricao: "", prazo: "pronta_entrega", prazo_dias: 10 })).toEqual({});
+  });
+
+  it("sem prazo (aula) não confere os dias", () => {
+    expect(validarVitrineProduto({ descricao: "", prazo_dias: 999 })).toEqual({});
   });
 });
 
