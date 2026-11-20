@@ -99,7 +99,9 @@ types/        tipos; vários arquivos ainda vazios
 middleware.ts proteção de rotas
 ```
 
-Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora-rapida`, `/empresa/termometro`.
+Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora-rapida`, `/empresa/termometro`, `/empresa/vitrine`.
+
+Vitrine (Jornada 3, V3b): `/empresa/vitrine` edita endereço, WhatsApp, Instagram e "sobre", publica ou tira do ar (aberta pelo cartão "Sua vitrine" em Dados do ateliê, que fica fora do formulário). Rota privada; a página pública `/v/<endereco>` vem na V5.
 
 Termômetro da marca (Etapa 11): `/empresa/termometro` tem as 5 perguntas do mês atual, mostra os pontos e o nível sugerido e, com um clique, salva as respostas e muda o nível da marca (aberto pelo cartão "Sua marca" em Dados do ateliê).
 

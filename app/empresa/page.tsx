@@ -7,6 +7,7 @@ import { MoneyField } from "@/components/forms/MoneyField";
 import { QuantityField } from "@/components/forms/QuantityField";
 import { TextField } from "@/components/forms/TextField";
 import { useAvisos } from "@/components/ui/Avisos";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
 import { Cartao } from "@/components/ui/Cartao";
@@ -25,10 +26,12 @@ import {
 } from "@/lib/precificacao";
 import { createClient } from "@/lib/supabase/client";
 import { erroFatorMarca, EXPLICACAO_MARCA } from "@/lib/termometro";
+import type { Vitrine } from "@/lib/vitrine";
 import {
   buscarConfiguracoesAtelie,
   salvarConfiguracoesAtelie,
 } from "@/services/atelie.service";
+import { buscarMinhaVitrine } from "@/services/vitrine.service";
 
 type Estado = "carregando" | "erro" | "pronto";
 
@@ -102,7 +105,13 @@ export default function DadosAtelie() {
 
   /* Retrato dos últimos valores carregados ou salvos (null = ainda carregando). */
   const [retratoSalvo, setRetratoSalvo] = useState<string | null>(null);
-  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  /* Para onde ir depois de confirmar "Sair sem salvar?" (null = diálogo fechado). */
+  const [destinoSaida, setDestinoSaida] = useState<string | null>(null);
+
+  /* Cartão "Sua vitrine": busca própria; carregando ou falha → sem selo. */
+  const [vitrineCartao, setVitrineCartao] = useState<
+    { estado: "carregando" | "erro" } | { estado: "pronto"; vitrine: Vitrine | null }
+  >({ estado: "carregando" });
 
   /* ---------------- Carregamento ---------------- */
 
@@ -147,6 +156,32 @@ export default function DadosAtelie() {
       ativo = false;
     };
   }, [tentativa]);
+
+  useEffect(() => {
+    let ativo = true;
+
+    buscarMinhaVitrine()
+      .then((vitrine) => {
+        if (ativo) setVitrineCartao({ estado: "pronto", vitrine });
+      })
+      .catch(() => {
+        if (ativo) setVitrineCartao({ estado: "erro" });
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  /** Link para outra página: com alterações não salvas, pergunta antes. */
+  function sairPara(destino: string) {
+    return (e: { preventDefault: () => void }) => {
+      if (temAlteracoes) {
+        e.preventDefault();
+        setDestinoSaida(destino);
+      }
+    };
+  }
 
   function limparErro(campo: string) {
     if (erros[campo]) setErros((e) => ({ ...e, [campo]: "" }));
@@ -532,13 +567,8 @@ export default function DadosAtelie() {
               <LinkBotao
                 href="/empresa/termometro"
                 variante="secundario"
-                onClick={(e) => {
-                  /* Com alterações não salvas, pergunta antes de sair. */
-                  if (temAlteracoes) {
-                    e.preventDefault();
-                    setConfirmarSaida(true);
-                  }
-                }}
+                /* Com alterações não salvas, pergunta antes de sair. */
+                onClick={sairPara("/empresa/termometro")}
               >
                 Responder o termômetro
               </LinkBotao>
@@ -559,18 +589,54 @@ export default function DadosAtelie() {
         </form>
       )}
 
+      {/* Fora do <form>: não é salvo junto nem fica sob a barra fixa. */}
+      {estado === "pronto" && (
+        <Cartao titulo="Sua vitrine" className="mt-6">
+          <div className="flex flex-col items-start gap-3 text-lg">
+            {vitrineCartao.estado === "pronto" && vitrineCartao.vitrine?.publicada ? (
+              <>
+                <Badge variante="sucesso">Publicada</Badge>
+                <p className="break-all text-texto">
+                  Sua vitrine está no ar: <strong>/v/{vitrineCartao.vitrine.endereco}</strong>
+                </p>
+              </>
+            ) : vitrineCartao.estado === "pronto" && vitrineCartao.vitrine ? (
+              <>
+                <Badge variante="neutro">Não publicada</Badge>
+                <p className="text-texto-suave">
+                  Mostre seus produtos numa página com o seu WhatsApp.
+                </p>
+              </>
+            ) : (
+              <p className="text-texto-suave">
+                Mostre seus produtos numa página com o seu WhatsApp. Suas clientes falam direto
+                com você.
+              </p>
+            )}
+            <LinkBotao
+              href="/empresa/vitrine"
+              variante="secundario"
+              onClick={sairPara("/empresa/vitrine")}
+            >
+              Arrumar minha vitrine
+            </LinkBotao>
+          </div>
+        </Cartao>
+      )}
+
       <ConfirmDialog
-        aberto={confirmarSaida}
+        aberto={destinoSaida !== null}
         titulo="Sair sem salvar?"
         mensagem="As alterações desta página ainda não foram salvas. Se sair agora, elas se perdem."
         textoConfirmar="Sair sem salvar"
         textoCancelar="Continuar aqui"
         variante="perigo"
         aoConfirmar={() => {
-          setConfirmarSaida(false);
-          router.push("/empresa/termometro");
+          const destino = destinoSaida;
+          setDestinoSaida(null);
+          if (destino) router.push(destino);
         }}
-        aoCancelar={() => setConfirmarSaida(false)}
+        aoCancelar={() => setDestinoSaida(null)}
       />
     </div>
   );
