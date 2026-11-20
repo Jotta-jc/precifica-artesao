@@ -4,7 +4,7 @@
    (migration 20261120090000). */
 
 /* Caminho relativo de propósito: o Vitest roda sem o atalho "@/". */
-import { formatarMoeda } from "./formatar";
+import { formatarMoeda, formatarTelefone } from "./formatar";
 import { semAcentos } from "./texto";
 
 // ---------------------------------------------------------------------
@@ -146,6 +146,19 @@ export function linkWhatsapp(numero: string, nomeProduto?: string): string {
   return `https://wa.me/${digitos}?text=${encodeURIComponent(mensagem)}`;
 }
 
+/**
+ * WhatsApp para mostrar na tela: "5541999999999" → "(41) 99999-9999".
+ * Com 12 ou 13 dígitos começando por 55, tira o 55. Outro tamanho → só os dígitos.
+ */
+export function formatarWhatsapp(numero: string): string {
+  let digitos = normalizarWhatsapp(numero);
+  if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")) {
+    digitos = digitos.slice(2);
+  }
+  if (digitos.length === 10 || digitos.length === 11) return formatarTelefone(digitos);
+  return digitos;
+}
+
 // ---------------------------------------------------------------------
 // Instagram
 // ---------------------------------------------------------------------
@@ -280,4 +293,128 @@ export function validarVitrine(
   if (erroSobre) erros.sobre = erroSobre;
 
   return erros;
+}
+
+// ---------------------------------------------------------------------
+// Vitrine pública (V5): retorno da função vitrine_publica
+// ---------------------------------------------------------------------
+
+/** Um produto como a página pública recebe (sem custos nem ficha). */
+export interface ProdutoPublico {
+  id: number;
+  nome: string;
+  tipo: "fisico" | "aula";
+  descricao: string | null;
+  /** null = "Preço sob consulta". */
+  preco: number | null;
+  /** null na aula. */
+  prazo: PrazoProduto | null;
+  prazo_dias: number | null;
+}
+
+/** A vitrine publicada, como a página pública recebe. */
+export interface VitrinePublica {
+  endereco: string;
+  nome_atelie: string | null;
+  whatsapp: string;
+  instagram: string | null;
+  sobre: string | null;
+  produtos: ProdutoPublico[];
+}
+
+export const NOME_RESERVA_VITRINE = "Vitrine do ateliê";
+
+function ehObjeto(valor: unknown): valor is Record<string, unknown> {
+  return typeof valor === "object" && valor !== null && !Array.isArray(valor);
+}
+
+/** Texto com algo além de espaços → sem espaços nas pontas; o resto → null. */
+function textoOuNull(valor: unknown): string | null {
+  if (typeof valor !== "string") return null;
+  const limpo = valor.trim();
+  return limpo === "" ? null : limpo;
+}
+
+function lerProdutoPublico(dados: unknown): ProdutoPublico | null {
+  if (!ehObjeto(dados)) return null;
+
+  const { id, tipo } = dados;
+  if (typeof id !== "number" || !Number.isSafeInteger(id)) return null;
+  const nome = textoOuNull(dados.nome);
+  if (nome === null) return null;
+  if (tipo !== "fisico" && tipo !== "aula") return null;
+
+  const preco =
+    typeof dados.preco === "number" && Number.isFinite(dados.preco) && dados.preco > 0
+      ? dados.preco
+      : null;
+
+  let prazo: PrazoProduto | null =
+    dados.prazo === "pronta_entrega" || dados.prazo === "sob_encomenda" ? dados.prazo : null;
+  let prazoDias =
+    typeof dados.prazo_dias === "number" &&
+    Number.isInteger(dados.prazo_dias) &&
+    dados.prazo_dias >= 1 &&
+    dados.prazo_dias <= 365
+      ? dados.prazo_dias
+      : null;
+
+  if (tipo === "aula") {
+    prazo = null;
+    prazoDias = null;
+  }
+  if (prazo !== "sob_encomenda") prazoDias = null;
+
+  return {
+    id,
+    nome,
+    tipo,
+    descricao: textoOuNull(dados.descricao),
+    preco,
+    prazo,
+    prazo_dias: prazoDias,
+  };
+}
+
+/**
+ * Confere o que veio da função vitrine_publica, campo a campo.
+ * Vitrine inválida → null; produto inválido é descartado. Não muta a entrada.
+ */
+export function lerVitrinePublica(dados: unknown): VitrinePublica | null {
+  if (!ehObjeto(dados)) return null;
+
+  const endereco = textoOuNull(dados.endereco);
+  const whatsapp = textoOuNull(dados.whatsapp);
+  if (endereco === null || whatsapp === null) return null;
+
+  const produtos = Array.isArray(dados.produtos)
+    ? dados.produtos
+        .map(lerProdutoPublico)
+        .filter((p): p is ProdutoPublico => p !== null)
+    : [];
+
+  return {
+    endereco,
+    nome_atelie: textoOuNull(dados.nome_atelie),
+    whatsapp,
+    instagram: textoOuNull(dados.instagram),
+    sobre: textoOuNull(dados.sobre),
+    produtos,
+  };
+}
+
+/** Nome do ateliê para o título; vazio → "Vitrine do ateliê". */
+export function nomeDaVitrine(nome: string | null): string {
+  return textoOuNull(nome) ?? NOME_RESERVA_VITRINE;
+}
+
+/** Prazo para a página pública; aula ou sem prazo → null (não mostrar). */
+export function prazoPublico(produto: ProdutoPublico): string | null {
+  if (produto.tipo === "aula" || produto.prazo === null) return null;
+  return textoPrazo({ prazo: produto.prazo, prazo_dias: produto.prazo_dias });
+}
+
+/** Preço para a página pública: a função já manda null quando é "sob consulta". */
+export function precoPublico(produto: ProdutoPublico): string {
+  return textoPreco({ preco: produto.preco, mostrar_preco: true });
 }

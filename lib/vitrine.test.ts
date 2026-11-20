@@ -4,13 +4,20 @@ import { formatarMoeda } from "./formatar";
 import { normalizarTexto, semAcentos } from "./texto";
 import {
   ENDERECOS_RESERVADOS,
+  formatarWhatsapp,
+  lerVitrinePublica,
   linkInstagram,
   linkWhatsapp,
+  NOME_RESERVA_VITRINE,
+  nomeDaVitrine,
   normalizarEndereco,
   normalizarInstagram,
   normalizarWhatsapp,
+  precoPublico,
+  prazoPublico,
   produtoNaVitrine,
   sugerirEndereco,
+  type ProdutoPublico,
   textoPrazo,
   textoPreco,
   validarDescricao,
@@ -129,6 +136,215 @@ describe("WhatsApp", () => {
     expect(link).toBe(
       "https://wa.me/5541999999999?text=Ol%C3%A1!%20Vi%20o%20produto%20Bolsa%20Croch%C3%AA%20na%20sua%20vitrine%20e%20quero%20saber%20mais."
     );
+  });
+
+  it.each(["", "   "])("linkWhatsapp: nome vazio ou só espaços (%j) → mensagem geral", (nome) => {
+    expect(linkWhatsapp("41999999999", nome)).toBe(
+      `https://wa.me/5541999999999?text=${encodeURIComponent("Olá! Vi a sua vitrine e quero saber mais.")}`
+    );
+  });
+
+  it("linkWhatsapp: nome com espaços nas pontas fica sem eles", () => {
+    expect(linkWhatsapp("41999999999", "  Bag Aleska  ")).toBe(
+      `https://wa.me/5541999999999?text=${encodeURIComponent(
+        "Olá! Vi o produto Bag Aleska na sua vitrine e quero saber mais."
+      )}`
+    );
+  });
+
+  it.each([
+    ["4133334444", "(41) 3333-4444"],
+    ["41999999999", "(41) 99999-9999"],
+    ["554133334444", "(41) 3333-4444"],
+    ["5541999999999", "(41) 99999-9999"],
+    [" +55 (41) 99999-9999 ", "(41) 99999-9999"],
+    ["(41) 9999-9999", "(41) 9999-9999"],
+    ["123456789", "123456789"],
+    ["991234567890", "991234567890"],
+    ["12-345", "12345"],
+    ["", ""],
+  ])("formatarWhatsapp(%j) → %j", (entrada, saida) => {
+    expect(formatarWhatsapp(entrada)).toBe(saida);
+  });
+});
+
+describe("lerVitrinePublica", () => {
+  /* Retorno real da teste-atelie, conferido no banco (Bag Aleska, id 21). */
+  const bagAleska = {
+    id: 21,
+    nome: "Bag Aleska",
+    tipo: "fisico",
+    descricao: null,
+    preco: 529.62,
+    prazo: "sob_encomenda",
+    prazo_dias: null,
+  };
+  const exemplo = {
+    endereco: "teste-atelie",
+    nome_atelie: "Jotta Art",
+    whatsapp: "41999999999",
+    instagram: null,
+    sobre: "Texto de teste do ateliê.",
+    produtos: [bagAleska],
+  };
+
+  it("exemplo real passa igual", () => {
+    const lida = lerVitrinePublica(exemplo);
+    expect(lida).toEqual(exemplo);
+    expect(formatarWhatsapp(lida!.whatsapp)).toBe("(41) 99999-9999");
+    expect(precoPublico(lida!.produtos[0])).toContain("529,62");
+    expect(prazoPublico(lida!.produtos[0])).toBe("Sob encomenda");
+  });
+
+  it.each([null, undefined, "teste", 42, true, [], [exemplo]])("%j → null", (dados) => {
+    expect(lerVitrinePublica(dados)).toBeNull();
+  });
+
+  it.each([undefined, null, "", "   ", 41999999999])("sem whatsapp válido (%j) → null", (whatsapp) => {
+    expect(lerVitrinePublica({ ...exemplo, whatsapp })).toBeNull();
+  });
+
+  it.each([undefined, null, "", "  ", 7])("sem endereço válido (%j) → null", (endereco) => {
+    expect(lerVitrinePublica({ ...exemplo, endereco })).toBeNull();
+  });
+
+  it("textos com espaços nas pontas; vazios ou não texto → null", () => {
+    const lida = lerVitrinePublica({
+      ...exemplo,
+      nome_atelie: "  Teste Ateliê  ",
+      instagram: "   ",
+      sobre: 123,
+    });
+    expect(lida?.nome_atelie).toBe("Teste Ateliê");
+    expect(lida?.instagram).toBeNull();
+    expect(lida?.sobre).toBeNull();
+  });
+
+  it.each([undefined, null, "lista", { 0: bagAleska }])("produtos não array (%j) → []", (produtos) => {
+    expect(lerVitrinePublica({ ...exemplo, produtos })?.produtos).toEqual([]);
+  });
+
+  it.each([
+    ["id texto", { id: "21" }],
+    ["id quebrado", { id: 2.5 }],
+    ["id infinito", { id: Infinity }],
+    ["sem nome", { nome: undefined }],
+    ["nome vazio", { nome: "  " }],
+    ["tipo inválido", { tipo: "servico" }],
+  ])("produto com %s é descartado", (_caso, mudanca) => {
+    const produtos = [{ ...bagAleska, ...mudanca }, { ...bagAleska, id: 22 }, null, "x"];
+    expect(lerVitrinePublica({ ...exemplo, produtos })?.produtos.map((p) => p.id)).toEqual([22]);
+  });
+
+  it.each([0, -10, "189.90", NaN, Infinity, null])("preço %j → null", (preco) => {
+    expect(lerVitrinePublica({ ...exemplo, produtos: [{ ...bagAleska, preco }] })?.produtos[0].preco).toBeNull();
+  });
+
+  it("descrição com espaços nas pontas; só espaços → null", () => {
+    const lida = lerVitrinePublica({
+      ...exemplo,
+      produtos: [
+        { ...bagAleska, descricao: "  Bolsa  " },
+        { ...bagAleska, id: 22, descricao: "   " },
+      ],
+    });
+    expect(lida?.produtos.map((p) => p.descricao)).toEqual(["Bolsa", null]);
+  });
+
+  it("aula com prazo → prazo e dias null", () => {
+    const lida = lerVitrinePublica({
+      ...exemplo,
+      produtos: [{ ...bagAleska, tipo: "aula", prazo: "sob_encomenda", prazo_dias: 10 }],
+    });
+    expect(lida?.produtos[0]).toMatchObject({ tipo: "aula", prazo: null, prazo_dias: null });
+  });
+
+  it("pronta entrega com dias → dias null", () => {
+    const lida = lerVitrinePublica({
+      ...exemplo,
+      produtos: [{ ...bagAleska, prazo: "pronta_entrega", prazo_dias: 10 }],
+    });
+    expect(lida?.produtos[0]).toMatchObject({ prazo: "pronta_entrega", prazo_dias: null });
+  });
+
+  it("prazo inválido → prazo e dias null", () => {
+    const lida = lerVitrinePublica({ ...exemplo, produtos: [{ ...bagAleska, prazo: "amanha" }] });
+    expect(lida?.produtos[0]).toMatchObject({ prazo: null, prazo_dias: null });
+  });
+
+  it.each([0, 366, 2.5, "15", -1])("dias %j → null", (prazo_dias) => {
+    const lida = lerVitrinePublica({ ...exemplo, produtos: [{ ...bagAleska, prazo_dias }] });
+    expect(lida?.produtos[0]).toMatchObject({ prazo: "sob_encomenda", prazo_dias: null });
+  });
+
+  it("mantém a ordem que veio do banco", () => {
+    const produtos = [
+      { ...bagAleska, id: 30, nome: "Zebra" },
+      { ...bagAleska, id: 10, nome: "Abacaxi" },
+    ];
+    expect(lerVitrinePublica({ ...exemplo, produtos })?.produtos.map((p) => p.id)).toEqual([30, 10]);
+  });
+
+  it("não muta a entrada", () => {
+    const entrada = {
+      ...exemplo,
+      nome_atelie: "  Teste  ",
+      produtos: [{ ...bagAleska, tipo: "aula" }, { id: "x" }],
+    };
+    const copia = structuredClone(entrada);
+    lerVitrinePublica(entrada);
+    expect(entrada).toEqual(copia);
+  });
+});
+
+describe("nomeDaVitrine", () => {
+  it.each([
+    ["  Ateliê da Ana  ", "Ateliê da Ana"],
+    ["", NOME_RESERVA_VITRINE],
+    ["   ", NOME_RESERVA_VITRINE],
+    [null, NOME_RESERVA_VITRINE],
+  ])("%j → %j", (nome, saida) => {
+    expect(nomeDaVitrine(nome)).toBe(saida);
+  });
+
+  it("a reserva é Vitrine do ateliê", () => {
+    expect(NOME_RESERVA_VITRINE).toBe("Vitrine do ateliê");
+  });
+});
+
+describe("prazoPublico e precoPublico", () => {
+  const base: ProdutoPublico = {
+    id: 1,
+    nome: "Bag",
+    tipo: "fisico",
+    descricao: null,
+    preco: 120,
+    prazo: "pronta_entrega",
+    prazo_dias: null,
+  };
+
+  it("aula → null", () => {
+    expect(prazoPublico({ ...base, tipo: "aula", prazo: "sob_encomenda", prazo_dias: 5 })).toBeNull();
+  });
+
+  it("prazo null → null", () => {
+    expect(prazoPublico({ ...base, prazo: null })).toBeNull();
+  });
+
+  it("pronta entrega", () => {
+    expect(prazoPublico(base)).toBe("Pronta entrega");
+  });
+
+  it("sob encomenda com e sem dias", () => {
+    expect(prazoPublico({ ...base, prazo: "sob_encomenda", prazo_dias: 15 })).toBe(
+      "Sob encomenda: fica pronto em até 15 dias"
+    );
+    expect(prazoPublico({ ...base, prazo: "sob_encomenda", prazo_dias: null })).toBe("Sob encomenda");
+  });
+
+  it("preço número → moeda; null → sob consulta", () => {
+    expect(precoPublico(base)).toBe(formatarMoeda(120));
+    expect(precoPublico({ ...base, preco: null })).toBe("Preço sob consulta");
   });
 });
 
