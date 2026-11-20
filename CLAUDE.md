@@ -107,7 +107,7 @@ Cálculo rápido (Etapa 10): `/calculadora-rapida` faz a conta de uma peça ou a
 
 Fatos importantes:
 
-- O layout raiz é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador.
+- O layout raiz (`app/layout.tsx`) é Server Component; o `AppShell` (menus e avisos) é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador; o cliente de servidor (`lib/supabase/server.ts`) só é usado no retorno do login.
 - A página `/` só redireciona para `/dashboard` (quem não está logado vai antes para `/login` pelo middleware).
 - Os componentes de produto ficam em `components/produtos/` (a pasta antiga `components/products/` foi removida na Etapa 8).
 - Há cerca de 80 `console.*` de diagnóstico e 36 erros de lint. Não corrija fora do escopo do prompt.
@@ -125,6 +125,7 @@ Fatos importantes:
 - **RLS ativo em todas as tabelas**, com policies de isolamento por usuária (`auth.uid() = user_id`).
 - Tabelas filhas são protegidas pela mãe: `order_items` pelo pedido, `product_materials` pelo produto.
 - O visitante não logado (`anon`) não tem acesso a nenhuma tabela. Usuárias logadas (`authenticated`) têm só SELECT, INSERT, UPDATE e DELETE. Nunca conceda acesso a `anon`.
+- **Regra L11 (migration 20261120090000):** tabelas, sequências e funções criadas pelo papel `postgres` no esquema `public` não nascem mais com acesso do `anon` (default privileges). Além disso, por uma regra GLOBAL (o `EXECUTE` de `PUBLIC` em funções novas é padrão global do Postgres), toda função nova criada pelo `postgres` nasce sem execute para ninguém além do dono: **cada migration que cria função precisa de `grant execute ... to authenticated` explícito** (ou `to anon`, só na função pública da vitrine). As funções que já existiam não mudaram. Mesmo assim, toda migration nova continua com o seu `revoke ... from anon` explícito. As funções de gatilho `handle_new_user` e `set_updated_at` não podem ser chamadas diretamente (execute revogado de public, anon e authenticated); os gatilhos continuam funcionando. A única exceção futura para o visitante será a função pública da vitrine (etapa V4), liberada de propósito.
 - Isolamento testado na prática com duas contas Google (15/11/2026): uma conta não vê nem abre registros da outra.
 - Todas as políticas são para `authenticated` e usam `(select auth.uid())`, a forma rápida (o banco calcula a usuária uma vez por consulta). Toda política nova deve seguir esse padrão.
 - `user_id` é obrigatório (`not null`) em `products` e `materials`. `products`, `material_movements` e `business_metrics` têm ligação com `auth.users`.
@@ -145,13 +146,14 @@ alter table public.nome_tabela enable row level security;
 | `clientes` | id uuid; `tipo_cliente` aceita só `cliente`, `revendedor`, `parceiro` |
 | `orders` | id bigint; `client_id` → clientes; status padrão `orcamento`; `estoque_baixado` |
 | `order_items` | `order_id`, `product_id`, quantidade, valor_unitario, valor_total |
-| `products` | `categoria` é texto (hoje grava o id de material_categories: erro conhecido) |
+| `products` | `categoria` é texto (hoje grava o id de material_categories: erro conhecido). Vitrine (migration 20261120090000): `descricao` (até 1000), `publicado` (padrão false), `mostrar_preco` (padrão true; false = "sob consulta"), `prazo` (`pronta_entrega` ou `sob_encomenda`) e `prazo_dias` (1 a 365, só com `sob_encomenda`). Na vitrine aparece só produto `ativo` + `publicado` + vitrine publicada; o preço é `products.preco` |
 | `materials` | **`estoque_atual` é a coluna de estoque oficial na prática**; `estoque` é legada |
 | `product_materials` | **ficha técnica, já existe e está em uso**; quantidade > 0 validada em todas as linhas (migration 20261119180000) |
 | `material_movements` | `tipo` aceita só `entrada`, `saida`, `ajuste` |
 | `material_categories` | coluna `nome` (não `name`); 16 categorias de teste já cadastradas — não reinserir |
 | `business_metrics` | uma linha por usuária (`user_id` único); valor/hora |
 | `termometro_marca` | respostas do termômetro da marca: uma linha por mês por conta (`unique (user_id, mes)`, `mes` no dia 1), histórico; sem exclusão pela tela. Só sugere o nível: o motor continua usando `business_metrics.marca_nivel` e `marca_fator` (migration 20261119200000) |
+| `vitrines` | vitrine pública do ateliê, uma por conta (`user_id` único): `endereco` único (3 a 40, minúsculas, números e hífens; endereço `/v/<endereco>`), `publicada` (padrão false, só com WhatsApp), `whatsapp` (10 a 13 dígitos), `instagram` (sem @), `sobre` (até 500). Criada quando a artesã salva pela primeira vez; sem exclusão pela tela; `anon` sem acesso (migration 20261120090000) |
 
 ### Tabelas que existem mas o código não usa
 
@@ -165,7 +167,7 @@ O banco recusa (`on delete restrict`, erro `23503`) a exclusão de:
 - **produto** que aparece em itens de pedido;
 - **material** com movimentações de estoque ou usado em ficha técnica.
 
-As telas de clientes, produtos e materiais tratam o código `23503` com mensagem clara em português. Continuam em cascata, de propósito: excluir um **pedido** apaga seus itens, e excluir um **produto sem vendas** apaga sua ficha técnica. A opção "Arquivar" ainda não existe.
+As telas de clientes, produtos e materiais tratam o código `23503` com mensagem clara em português. Continuam em cascata, de propósito: excluir um **pedido** apaga seus itens, e excluir um **produto sem vendas** apaga sua ficha técnica. Produtos e materiais podem ser **arquivados** (`ativo = false`): saem das listas e das escolhas novas sem perder o histórico; clientes ainda não têm essa opção.
 
 ### Migrations
 
@@ -234,7 +236,7 @@ Custo da peça = materiais (ficha técnica × custo_por_unidade) + tempo (horas 
 - Fonte: Nunito Sans (escolhida em 15/11/2026: zero sem traço, que não se confunde com o 8; negrito firme). Texto base 18px. Variável CSS --font-principal.
 - Cores: fundo `#F6F4EF`; cartões brancos com borda `#DCD8CF`; texto `#1F2421`; texto secundário `#4E5651`; destaque verde-musgo `#2F5D50` (hover `#1F4238`, fundo suave `#E3EEE9`); aviso âmbar com fundo `#FDF1DC` e texto `#6B4100`; exclusão em vermelho escuro com bom contraste.
 - Ícones de linha (SVG) sempre acompanhados de texto. Não usar emojis como ícones.
-- Menu: no computador, lateral CLARA com o nome do sistema e do ateliê, ícone + texto e item ativo em verde suave; no celular, barra fixa embaixo com 5 itens (Início, Materiais, Produtos, Vendas, Vitrine). Sem fundo preto.
+- Menu: no computador, lateral CLARA com o nome do sistema e do ateliê, ícone + texto e item ativo em verde suave; no celular, barra fixa embaixo com Início, Materiais, Produtos, Vendas e o botão "Mais" (Estoque, Cálculo rápido, Clientes, Dados do ateliê). O item Vitrine entra na barra quando a vitrine pública existir (Jornada 3, etapa V5). Sem fundo preto.
 - Linguagem do dia a dia: "Início" (não "Dashboard"), "Meu lucro", "Preço sugerido". Sem "Score", "Performance" ou "Premium".
 
 ---
