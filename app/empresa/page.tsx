@@ -21,6 +21,7 @@ import {
   type NivelMarca,
 } from "@/lib/precificacao";
 import { createClient } from "@/lib/supabase/client";
+import { erroFatorMarca, EXPLICACAO_MARCA } from "@/lib/termometro";
 import {
   buscarConfiguracoesAtelie,
   salvarConfiguracoesAtelie,
@@ -29,13 +30,6 @@ import {
 type Estado = "carregando" | "erro" | "pronto";
 
 const NIVEIS_MARCA: NivelMarca[] = ["comecando", "regional", "reconhecida", "referencia"];
-
-const EXPLICACAO_MARCA: Record<NivelMarca, string> = {
-  comecando: "Você está começando a vender ou ainda é pouco conhecida.",
-  regional: "Clientes da sua cidade já conhecem e indicam o seu trabalho.",
-  reconhecida: "Seu nome atrai clientes de outros lugares e tem procura constante.",
-  referencia: "Você é referência no seu tipo de peça: ensina, expõe ou recebe prêmios.",
-};
 
 /* Percentuais: na tela a artesã vê e digita 15; no banco fica 0.15. */
 function paraPercentual(fracao: number): number {
@@ -155,9 +149,8 @@ export default function DadosAtelie() {
     if (margemIdeal === null) novos.margemIdeal = "Digite a margem ideal, como 30.";
 
     const fator = marcaFator ?? 0;
-    if (marcaNivel === "referencia" && fator < PADROES_PRECO.marca.referencia) {
-      novos.marcaFator = "Para Referência, o fator precisa ser 2 ou mais.";
-    }
+    const erroFator = erroFatorMarca(marcaNivel, marcaFator);
+    if (erroFator) novos.marcaFator = erroFator;
 
     /* Mesmas regras e mensagens do motor de preço. */
     if (!novos.dias && !novos.horasDia) {
