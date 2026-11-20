@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { MoneyField } from "@/components/forms/MoneyField";
@@ -9,7 +10,9 @@ import { useAvisos } from "@/components/ui/Avisos";
 import { Button } from "@/components/ui/Button";
 import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
 import { Cartao } from "@/components/ui/Cartao";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LinkBotao } from "@/components/ui/LinkBotao";
 import { Loading } from "@/components/ui/Loading";
 import { formatarMoeda, formatarNumero } from "@/lib/formatar";
 import {
@@ -50,8 +53,36 @@ function mensagemDoMotor(erro: unknown): string | null {
   return erro instanceof ErroPrecificacao ? erro.message : null;
 }
 
+/** Os valores do formulário num texto só, para saber se há alterações não salvas. */
+function retrato(v: {
+  nome: string;
+  meta: number | null;
+  custosFixos: number | null;
+  dias: number | null;
+  horasDia: number | null;
+  taxas: number | null;
+  margemMinima: number | null;
+  margemIdeal: number | null;
+  marcaNivel: NivelMarca;
+  marcaFator: number | null;
+}): string {
+  return JSON.stringify([
+    v.nome,
+    v.meta,
+    v.custosFixos,
+    v.dias,
+    v.horasDia,
+    v.taxas,
+    v.margemMinima,
+    v.margemIdeal,
+    v.marcaNivel,
+    v.marcaFator,
+  ]);
+}
+
 export default function DadosAtelie() {
   const { avisar } = useAvisos();
+  const router = useRouter();
 
   const [estado, setEstado] = useState<Estado>("carregando");
   const [tentativa, setTentativa] = useState(0);
@@ -68,6 +99,10 @@ export default function DadosAtelie() {
   const [margemIdeal, setMargemIdeal] = useState<number | null>(null);
   const [marcaNivel, setMarcaNivel] = useState<NivelMarca>("comecando");
   const [marcaFator, setMarcaFator] = useState<number | null>(1);
+
+  /* Retrato dos últimos valores carregados ou salvos (null = ainda carregando). */
+  const [retratoSalvo, setRetratoSalvo] = useState<string | null>(null);
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
 
   /* ---------------- Carregamento ---------------- */
 
@@ -87,6 +122,20 @@ export default function DadosAtelie() {
         setMargemIdeal(paraPercentual(c.margem_ideal));
         setMarcaNivel(c.marca_nivel);
         setMarcaFator(c.marca_fator);
+        setRetratoSalvo(
+          retrato({
+            nome: c.nome_empresa ?? "",
+            meta: c.meta_faturamento,
+            custosFixos: c.custos_fixos_mensais,
+            dias: c.dias_trabalhados,
+            horasDia: c.horas_por_dia,
+            taxas: paraPercentual(c.taxas_venda),
+            margemMinima: paraPercentual(c.margem_minima),
+            margemIdeal: paraPercentual(c.margem_ideal),
+            marcaNivel: c.marca_nivel,
+            marcaFator: c.marca_fator,
+          })
+        );
         setEstado("pronto");
       })
       .catch(() => {
@@ -102,6 +151,20 @@ export default function DadosAtelie() {
   function limparErro(campo: string) {
     if (erros[campo]) setErros((e) => ({ ...e, [campo]: "" }));
   }
+
+  const retratoAtual = retrato({
+    nome,
+    meta,
+    custosFixos,
+    dias,
+    horasDia,
+    taxas,
+    margemMinima,
+    margemIdeal,
+    marcaNivel,
+    marcaFator,
+  });
+  const temAlteracoes = retratoSalvo !== null && retratoAtual !== retratoSalvo;
 
   /* ---------------- Valor da hora, ao vivo (só pelo motor) ---------------- */
 
@@ -229,6 +292,7 @@ export default function DadosAtelie() {
         marca_fator: marcaFator ?? PADROES_PRECO.marca[marcaNivel],
       });
 
+      setRetratoSalvo(retratoAtual);
       avisar({ tipo: "sucesso", texto: "Dados do ateliê salvos." });
     } catch (erro) {
       avisar({
@@ -461,9 +525,24 @@ export default function DadosAtelie() {
               </div>
             )}
 
-            <p className="mt-6 text-base text-texto-suave">
-              Em breve: um termômetro vai ajudar você a escolher o nível.
-            </p>
+            <div className="mt-6 flex flex-col items-start gap-3">
+              <p className="text-lg text-texto-suave">
+                Não sabe qual nível escolher? Responda o termômetro da marca: são 5 perguntas.
+              </p>
+              <LinkBotao
+                href="/empresa/termometro"
+                variante="secundario"
+                onClick={(e) => {
+                  /* Com alterações não salvas, pergunta antes de sair. */
+                  if (temAlteracoes) {
+                    e.preventDefault();
+                    setConfirmarSaida(true);
+                  }
+                }}
+              >
+                Responder o termômetro
+              </LinkBotao>
+            </div>
           </Cartao>
 
           {/* Botão Salvar: sempre visível no celular, acima da barra de menu */}
@@ -479,6 +558,20 @@ export default function DadosAtelie() {
           </div>
         </form>
       )}
+
+      <ConfirmDialog
+        aberto={confirmarSaida}
+        titulo="Sair sem salvar?"
+        mensagem="As alterações desta página ainda não foram salvas. Se sair agora, elas se perdem."
+        textoConfirmar="Sair sem salvar"
+        textoCancelar="Continuar aqui"
+        variante="perigo"
+        aoConfirmar={() => {
+          setConfirmarSaida(false);
+          router.push("/empresa/termometro");
+        }}
+        aoCancelar={() => setConfirmarSaida(false)}
+      />
     </div>
   );
 }

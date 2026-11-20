@@ -99,7 +99,9 @@ types/        tipos; vários arquivos ainda vazios
 middleware.ts proteção de rotas
 ```
 
-Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora-rapida`.
+Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora-rapida`, `/empresa/termometro`.
+
+Termômetro da marca (Etapa 11): `/empresa/termometro` tem as 5 perguntas do mês atual, mostra os pontos e o nível sugerido e, com um clique, salva as respostas e muda o nível da marca (aberto pelo cartão "Sua marca" em Dados do ateliê).
 
 Cálculo rápido (Etapa 10): `/calculadora-rapida` faz a conta de uma peça ou aula sem cadastrar, com o motor único e os materiais do cadastro; nada é salvo. Telas antigas desligadas na Etapa 8 (o endereço só redireciona): `/calculadora` → `/produtos`; `/configuracoes` → `/empresa`.
 
@@ -200,6 +202,8 @@ Custo da peça = materiais (ficha técnica × custo_por_unidade) + tempo (horas 
 - Exclusividade: Produção regular ×1,0; Sob encomenda ×1,05; Edição limitada ×1,1; Peça única ×1,25.
 - Fator da marca (termômetro): Começando ×1,0; Conhecida na região ×1,2; Reconhecida ×1,5; Referência ×2,0 ou mais (ajuste livre).
 - Termômetro: perguntas 1 (seguidores) e 5 (mídia, feiras, prêmios, aulas) são informadas pela artesã, com lembrete mensal no Início. Perguntas 2 (vendas/mês, média de 3 meses), 3 (encomendas e espera) e 4 (clientes que voltam, 12 meses) passam a ser automáticas na Jornada 3; antes disso, ou com menos de 3 meses de registros, são informadas. A tela mostra a origem de cada número.
+- Termômetro, K12 (aprovada em 20/11/2026): o termômetro não pede fator. Mudar para Referência grava ×2,0 (`PADROES_PRECO.marca.referencia`); se ela já é Referência, nada muda e o fator dela fica. O ajuste fino do fator da Referência é só em "Dados do ateliê".
+- Termômetro, K13 (aprovada em 20/11/2026): um clique só, no cartão "Resultado". Com o resultado completo e o nível sugerido diferente do atual: botão principal "Salvar e mudar minha marca para <nível> (×fator)" e botão secundário "Só salvar as respostas". Sugerido igual ao atual: só "Salvar respostas" e a frase "A sugestão é igual ao seu nível de hoje.". Resultado incompleto: só "Salvar respostas". "Salvar e mudar" grava as respostas e depois o nível; se as respostas falharem, o nível não é tentado.
 - Valores iniciais: taxas 15%, margem mínima 20%, margem ideal 30%. Todos os percentuais são editáveis em "Dados do ateliê".
 - Exemplo para os testes: materiais 42 + tempo 6 h × 25 = 150 + complexidade 30% = 45 + embalagem 5 → custo 242 → mínimo 372,31; justo 440,00; sugerido 580,80 (marca 1,2 e exclusividade 1,1).
 - Se uma soma de taxas e margem chegar a 100% ou mais, o motor deve devolver erro, nunca dividir por zero ou dar preço negativo.

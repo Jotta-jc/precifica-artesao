@@ -1,5 +1,6 @@
-import { calcularValorHora, type NivelMarca } from "@/lib/precificacao";
+import { calcularValorHora, PADROES_PRECO, type NivelMarca } from "@/lib/precificacao";
 import { createClient } from "@/lib/supabase/client";
+import { erroFatorMarca } from "@/lib/termometro";
 
 /* Configurações do ateliê (tabela business_metrics, uma linha por usuária).
    Em caso de erro, as funções lançam o próprio erro do Supabase.
@@ -100,7 +101,7 @@ export async function salvarConfiguracoesAtelie(
     horasPorMes: dados.dias_trabalhados * dados.horas_por_dia,
   });
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("business_metrics")
     .update({
       nome_empresa: dados.nome_empresa,
@@ -118,7 +119,45 @@ export async function salvarConfiguracoesAtelie(
       valor_hora: valorHora,
       nivel_marca: NIVEL_MARCA_ANTIGO[dados.marca_nivel],
     })
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("user_id")
+    .maybeSingle();
 
   if (error) throw error;
+  /* O RLS não dá erro quando nenhuma linha muda: confere se gravou. */
+  if (!data) throw new Error("Não foi possível salvar os dados do ateliê. Tente de novo.");
+}
+
+/**
+ * Grava só o nível da marca (botão "Usar este nível" do termômetro).
+ * Mesma regra de Dados do ateliê: escolher um nível usa o fator padrão dele;
+ * só Referência aceita fator livre, 2 ou mais (erroFatorMarca). Grava também
+ * nivel_marca (1 a 4) por compatibilidade, como salvarConfiguracoesAtelie.
+ */
+export async function salvarNivelMarca(
+  nivel: NivelMarca,
+  fator: number | null
+): Promise<ConfiguracoesAtelie> {
+  const erro = erroFatorMarca(nivel, fator);
+  if (erro) throw new Error(erro);
+
+  const user = await usuariaLogada();
+  const fatorGravado =
+    nivel === "referencia" ? (fator ?? PADROES_PRECO.marca.referencia) : PADROES_PRECO.marca[nivel];
+
+  const { data, error } = await supabase
+    .from("business_metrics")
+    .update({
+      marca_nivel: nivel,
+      marca_fator: fatorGravado,
+      nivel_marca: NIVEL_MARCA_ANTIGO[nivel],
+    })
+    .eq("user_id", user.id)
+    .select(COLUNAS)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("Não foi possível salvar o nível da marca. Tente de novo.");
+
+  return normalizar(data as Record<string, unknown>);
 }

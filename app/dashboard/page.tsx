@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LembreteTermometro } from "@/components/inicio/LembreteTermometro";
 import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
 import { Cartao } from "@/components/ui/Cartao";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -48,6 +49,9 @@ export default function InicioPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
       <CabecalhoPagina titulo="Início" subtitulo="Um resumo do seu ateliê." />
+
+      {/* Busca própria: se falhar, não afeta os cartões abaixo. */}
+      <LembreteTermometro />
 
       {estado === "carregando" && <Loading texto="Carregando o resumo..." />}
 
