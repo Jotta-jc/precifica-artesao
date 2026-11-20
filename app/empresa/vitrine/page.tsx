@@ -13,6 +13,7 @@ import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
 import { Cartao } from "@/components/ui/Cartao";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { classeBotao } from "@/components/ui/estiloBotao";
 import { Icone } from "@/components/ui/Icone";
 import { LinkBotao } from "@/components/ui/LinkBotao";
 import { Loading } from "@/components/ui/Loading";
@@ -275,6 +276,19 @@ export default function VitrinePage() {
                     {origem}/v/{enderecoNormalizado}
                   </strong>
                 </p>
+                {/* Pelo que está SALVO (não pelo digitado): só com a vitrine no ar. */}
+                {vitrine?.publicada && (
+                  <a
+                    href={`/v/${vitrine.endereco}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={classeBotao({ variante: "secundario", className: "mt-3 w-full sm:w-auto" })}
+                  >
+                    <Icone nome="vitrine" />
+                    <span>Ver minha vitrine</span>
+                    <span className="sr-only"> (abre em nova aba)</span>
+                  </a>
+                )}
                 {mudouEnderecoPublicado && (
                   <div className="mt-3">
                     <Aviso>Ao mudar o endereço, o link antigo vai parar de funcionar.</Aviso>

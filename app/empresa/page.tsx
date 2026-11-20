@@ -13,6 +13,8 @@ import { CabecalhoPagina } from "@/components/ui/CabecalhoPagina";
 import { Cartao } from "@/components/ui/Cartao";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { classeBotao } from "@/components/ui/estiloBotao";
+import { Icone } from "@/components/ui/Icone";
 import { LinkBotao } from "@/components/ui/LinkBotao";
 import { Loading } from "@/components/ui/Loading";
 import { formatarMoeda, formatarNumero } from "@/lib/formatar";
@@ -613,13 +615,28 @@ export default function DadosAtelie() {
                 com você.
               </p>
             )}
-            <LinkBotao
-              href="/empresa/vitrine"
-              variante="secundario"
-              onClick={sairPara("/empresa/vitrine")}
-            >
-              Arrumar minha vitrine
-            </LinkBotao>
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <LinkBotao
+                href="/empresa/vitrine"
+                variante="secundario"
+                onClick={sairPara("/empresa/vitrine")}
+              >
+                Arrumar minha vitrine
+              </LinkBotao>
+              {/* Nova aba: não sai da página, por isso não passa pelo sairPara. */}
+              {vitrineCartao.estado === "pronto" && vitrineCartao.vitrine?.publicada && (
+                <a
+                  href={`/v/${vitrineCartao.vitrine.endereco}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={classeBotao({ variante: "secundario", className: "w-full sm:w-auto" })}
+                >
+                  <Icone nome="vitrine" />
+                  <span>Ver minha vitrine</span>
+                  <span className="sr-only"> (abre em nova aba)</span>
+                </a>
+              )}
+            </div>
           </div>
         </Cartao>
       )}

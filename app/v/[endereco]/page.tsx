@@ -7,7 +7,6 @@ import { Cartao } from "@/components/ui/Cartao";
 import { classeBotao, type VarianteBotao } from "@/components/ui/estiloBotao";
 import { Icone, type NomeIcone } from "@/components/ui/Icone";
 import {
-  formatarWhatsapp,
   linkInstagram,
   linkWhatsapp,
   nomeDaVitrine,
@@ -111,9 +110,8 @@ export default async function PaginaVitrine({ params }: PaginaVitrineProps) {
 
       <Cartao titulo="Fale com o ateliê">
         <div className="flex flex-col gap-4">
-          <p className="text-lg text-texto">
-            WhatsApp: <strong>{formatarWhatsapp(vitrine.whatsapp)}</strong>
-          </p>
+          {/* O12: o número não aparece em texto, só no link do botão. */}
+          <p className="text-lg text-texto">Tire dúvidas e faça encomendas pelo WhatsApp.</p>
           {vitrine.instagram && (
             <p className="break-words text-lg text-texto">
               Instagram: <strong>@{vitrine.instagram}</strong>

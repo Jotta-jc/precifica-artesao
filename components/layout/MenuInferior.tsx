@@ -27,16 +27,33 @@ const itensBarra: ItemBarra[] = [
   { rotulo: "Vendas", href: "/pedidos", icone: "vendas", tambem: ["/clientes"] },
 ];
 
-const itensMais: { rotulo: string; href: string; icone: NomeIcone }[] = [
+const itensMais: {
+  rotulo: string;
+  href: string;
+  icone: NomeIcone;
+  /** Páginas dentro do href que NÃO deixam o item ativo (têm item próprio). */
+  exceto?: string[];
+}[] = [
   { rotulo: "Estoque", href: "/estoque", icone: "compra" },
   { rotulo: "Cálculo rápido", href: "/calculadora-rapida", icone: "calculadora" },
   { rotulo: "Clientes", href: "/clientes", icone: "conversa" },
-  { rotulo: "Dados do ateliê", href: "/empresa", icone: "atelie" },
+  { rotulo: "Vitrine", href: "/empresa/vitrine", icone: "vitrine" },
+  {
+    rotulo: "Dados do ateliê",
+    href: "/empresa",
+    icone: "atelie",
+    exceto: ["/empresa/vitrine"],
+  },
 ];
 
-/** Ativo quando o endereço é o próprio href ou uma página dentro dele. */
-function estaAtivo(pathname: string, href: string) {
+/** O próprio endereço ou uma página dentro dele. */
+function dentroDe(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Ativo dentro do href, menos nas páginas de `exceto` (que têm item próprio). */
+function estaAtivo(pathname: string, href: string, exceto: string[] = []) {
+  return dentroDe(pathname, href) && !exceto.some((e) => dentroDe(pathname, e));
 }
 
 const classeItemBarra = (ativo: boolean) => `
@@ -208,7 +225,7 @@ export function MenuInferior() {
 
           <ul className="flex flex-col gap-1">
             {itensMais.map((item) => {
-              const ativo = estaAtivo(pathname, item.href);
+              const ativo = estaAtivo(pathname, item.href, item.exceto);
 
               return (
                 <li key={item.href}>

@@ -12,6 +12,8 @@ interface ItemMenu {
   rotulo: string;
   href: string;
   icone: NomeIcone;
+  /** Páginas dentro do href que NÃO deixam o item ativo (têm item próprio). */
+  exceto?: string[];
 }
 
 interface GrupoMenu {
@@ -44,18 +46,29 @@ const grupos: GrupoMenu[] = [
     itens: [
       { rotulo: "Pedidos", href: "/pedidos", icone: "vendas" },
       { rotulo: "Clientes", href: "/clientes", icone: "conversa" },
+      { rotulo: "Vitrine", href: "/empresa/vitrine", icone: "vitrine" },
     ],
   },
   {
     itens: [
-      { rotulo: "Dados do ateliê", href: "/empresa", icone: "atelie" },
+      {
+        rotulo: "Dados do ateliê",
+        href: "/empresa",
+        icone: "atelie",
+        exceto: ["/empresa/vitrine"],
+      },
     ],
   },
 ];
 
-/** Ativo quando o endereço é o próprio href ou uma página dentro dele. */
-function estaAtivo(pathname: string, href: string) {
+/** O próprio endereço ou uma página dentro dele. */
+function dentroDe(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Ativo dentro do href, menos nas páginas de `exceto` (que têm item próprio). */
+function estaAtivo(pathname: string, href: string, exceto: string[] = []) {
+  return dentroDe(pathname, href) && !exceto.some((e) => dentroDe(pathname, e));
 }
 
 export function MenuLateral() {
@@ -152,7 +165,7 @@ export function MenuLateral() {
                 className="flex flex-col gap-1"
               >
                 {grupo.itens.map((item) => {
-                  const ativo = estaAtivo(pathname, item.href);
+                  const ativo = estaAtivo(pathname, item.href, item.exceto);
 
                   return (
                     <li key={item.href}>
