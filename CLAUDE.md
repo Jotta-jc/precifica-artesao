@@ -149,6 +149,7 @@ alter table public.nome_tabela enable row level security;
 | `material_movements` | `tipo` aceita só `entrada`, `saida`, `ajuste` |
 | `material_categories` | coluna `nome` (não `name`); 16 categorias de teste já cadastradas — não reinserir |
 | `business_metrics` | uma linha por usuária (`user_id` único); valor/hora |
+| `termometro_marca` | respostas do termômetro da marca: uma linha por mês por conta (`unique (user_id, mes)`, `mes` no dia 1), histórico; sem exclusão pela tela. Só sugere o nível: o motor continua usando `business_metrics.marca_nivel` e `marca_fator` (migration 20261119200000) |
 
 ### Tabelas que existem mas o código não usa
 
