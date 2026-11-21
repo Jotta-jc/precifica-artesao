@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
+import { CartaoFoto } from "@/components/fotos/CartaoFoto";
 import { MoneyField } from "@/components/forms/MoneyField";
 import { QuantityField } from "@/components/forms/QuantityField";
 import { TextField } from "@/components/forms/TextField";
@@ -33,6 +34,7 @@ import {
   buscarConfiguracoesAtelie,
   salvarConfiguracoesAtelie,
 } from "@/services/atelie.service";
+import { enviarLogo, mensagemErroFoto, removerLogo } from "@/services/fotos.service";
 import { buscarMinhaVitrine } from "@/services/vitrine.service";
 
 type Estado = "carregando" | "erro" | "pronto";
@@ -110,6 +112,11 @@ export default function DadosAtelie() {
   /* Para onde ir depois de confirmar "Sair sem salvar?" (null = diálogo fechado). */
   const [destinoSaida, setDestinoSaida] = useState<string | null>(null);
 
+  /* Cartão "Logo do ateliê": envio imediato, fora do formulário e do
+     "Sair sem salvar?". nomeSalvo é o nome gravado (texto alternativo do logo). */
+  const [logo, setLogo] = useState<string | null>(null);
+  const [nomeSalvo, setNomeSalvo] = useState("");
+
   /* Cartão "Sua vitrine": busca própria; carregando ou falha → sem selo. */
   const [vitrineCartao, setVitrineCartao] = useState<
     { estado: "carregando" | "erro" } | { estado: "pronto"; vitrine: Vitrine | null }
@@ -133,6 +140,8 @@ export default function DadosAtelie() {
         setMargemIdeal(paraPercentual(c.margem_ideal));
         setMarcaNivel(c.marca_nivel);
         setMarcaFator(c.marca_fator);
+        setLogo(c.logo);
+        setNomeSalvo(c.nome_empresa ?? "");
         setRetratoSalvo(
           retrato({
             nome: c.nome_empresa ?? "",
@@ -330,6 +339,7 @@ export default function DadosAtelie() {
       });
 
       setRetratoSalvo(retratoAtual);
+      setNomeSalvo(nome.trim());
       avisar({ tipo: "sucesso", texto: "Dados do ateliê salvos." });
     } catch (erro) {
       avisar({
@@ -340,6 +350,29 @@ export default function DadosAtelie() {
       });
     } finally {
       setSalvando(false);
+    }
+  }
+
+  /* ---------------- Logo (envio imediato) ---------------- */
+
+  /** Envia o logo; devolve a mensagem de erro para o cartão, ou null. */
+  async function enviarLogoDoAtelie(arquivo: File): Promise<string | null> {
+    try {
+      setLogo(await enviarLogo(arquivo));
+      return null;
+    } catch (erro) {
+      return mensagemErroFoto(erro);
+    }
+  }
+
+  /** Tira o logo; devolve a mensagem de erro para o cartão, ou null. */
+  async function removerLogoDoAtelie(): Promise<string | null> {
+    try {
+      await removerLogo();
+      setLogo(null);
+      return null;
+    } catch (erro) {
+      return mensagemErroFoto(erro);
     }
   }
 
@@ -589,6 +622,22 @@ export default function DadosAtelie() {
             </Button>
           </div>
         </form>
+      )}
+
+      {/* Fora do <form>: envia na hora, não entra no "Sair sem salvar?". */}
+      {estado === "pronto" && (
+        <div className="mt-6">
+          <CartaoFoto
+            tipo="logo"
+            titulo="Logo do ateliê"
+            frase="Seu logo aparece na sua vitrine."
+            caminho={logo}
+            alt={nomeSalvo.trim() || "Logo do ateliê"}
+            idCampo="atelie-logo"
+            aoEnviar={enviarLogoDoAtelie}
+            aoRemover={removerLogoDoAtelie}
+          />
+        </div>
       )}
 
       {/* Fora do <form>: não é salvo junto nem fica sob a barra fixa. */}
