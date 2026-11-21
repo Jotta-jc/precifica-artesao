@@ -30,6 +30,7 @@ export const MENSAGENS_ERRO_FOTO: Record<CodigoErroFoto, string> = {
   MUITO_GRANDE: "Essa foto ficou grande demais. Escolha outra.",
   SESSAO_EXPIRADA: "Sua sessão expirou. Entre novamente para enviar a foto.",
   ENVIO_FALHOU: "Não foi possível enviar a foto. Confira a internet e tente de novo.",
+  REMOCAO_FALHOU: "Não foi possível remover a foto. Confira a internet e tente de novo.",
   PRODUTO_NAO_ENCONTRADO: "Produto não encontrado.",
 };
 
@@ -167,23 +168,45 @@ export async function enviarFotoProduto(produtoId: number, arquivo: File): Promi
   });
 }
 
+/**
+ * Roda uma remoção. Sessão expirada e produto não encontrado passam como
+ * vieram; qualquer outro erro (inclusive ao LER a foto antes de gravar)
+ * vira REMOCAO_FALHOU. Erro que não é ErroFoto vai para o log (code/message).
+ */
+async function comoRemocao(onde: string, remover: () => Promise<void>): Promise<void> {
+  try {
+    await remover();
+  } catch (erro) {
+    if (
+      erro instanceof ErroFoto &&
+      (erro.code === "SESSAO_EXPIRADA" || erro.code === "PRODUTO_NAO_ENCONTRADO")
+    ) {
+      throw erro;
+    }
+    if (!(erro instanceof ErroFoto)) registrar(onde, erro);
+    throw new ErroFoto("REMOCAO_FALHOU");
+  }
+}
+
 /** Tira a foto do produto: grava null e depois apaga o arquivo. */
 export async function removerFotoProduto(produtoId: number): Promise<void> {
-  await idDaUsuaria();
-  const produto = await lerFotoDoProduto(produtoId);
-  if (!produto.foto) return;
+  await comoRemocao("não tirou a foto do produto", async () => {
+    await idDaUsuaria();
+    const produto = await lerFotoDoProduto(produtoId);
+    if (!produto.foto) return;
 
-  const { data, error } = await supabase
-    .from("products")
-    .update({ foto: null })
-    .eq("id", produto.id)
-    .select("id")
-    .maybeSingle();
+    const { data, error } = await supabase
+      .from("products")
+      .update({ foto: null })
+      .eq("id", produto.id)
+      .select("id")
+      .maybeSingle();
 
-  if (error) throw error;
-  if (!data) throw new ErroFoto("PRODUTO_NAO_ENCONTRADO");
+    if (error) throw error;
+    if (!data) throw new ErroFoto("PRODUTO_NAO_ENCONTRADO");
 
-  await apagarArquivoDaVitrine(produto.foto);
+    await apagarArquivoDaVitrine(produto.foto);
+  });
 }
 
 // ---------------------------------------------------------------------
@@ -231,19 +254,21 @@ export async function enviarLogo(arquivo: File): Promise<string> {
 
 /** Tira o logo: grava null e depois apaga o arquivo. */
 export async function removerLogo(): Promise<void> {
-  const userId = await idDaUsuaria();
-  const logoAntigo = await lerLogo(userId);
-  if (!logoAntigo) return;
+  await comoRemocao("não tirou o logo", async () => {
+    const userId = await idDaUsuaria();
+    const logoAntigo = await lerLogo(userId);
+    if (!logoAntigo) return;
 
-  const { data, error } = await supabase
-    .from("business_metrics")
-    .update({ logo: null })
-    .eq("user_id", userId)
-    .select("user_id")
-    .maybeSingle();
+    const { data, error } = await supabase
+      .from("business_metrics")
+      .update({ logo: null })
+      .eq("user_id", userId)
+      .select("user_id")
+      .maybeSingle();
 
-  if (error) throw error;
-  if (!data) throw new ErroFoto("ENVIO_FALHOU");
+    if (error) throw error;
+    if (!data) throw new ErroFoto("REMOCAO_FALHOU");
 
-  await apagarArquivoDaVitrine(logoAntigo);
+    await apagarArquivoDaVitrine(logoAntigo);
+  });
 }

@@ -8,6 +8,7 @@ import {
   type DadosVitrineProduto,
   type EstadoVitrineDoAtelie,
 } from "@/components/produtos/CartaoNaVitrine";
+import { CartaoFoto } from "@/components/fotos/CartaoFoto";
 import { FichaTecnica } from "@/components/produtos/FichaTecnica";
 import { FormularioProduto } from "@/components/produtos/FormularioProduto";
 import { PainelPreco } from "@/components/produtos/PainelPreco";
@@ -48,6 +49,11 @@ import {
   updateProduto,
   type CategoriaProduto,
 } from "@/services/produtos.service";
+import {
+  enviarFotoProduto,
+  mensagemErroFoto,
+  removerFotoProduto,
+} from "@/services/fotos.service";
 import { buscarMinhaVitrine } from "@/services/vitrine.service";
 
 type Estado = "carregando" | "naoEncontrado" | "erro" | "pronto";
@@ -352,6 +358,30 @@ export default function EditarProdutoPage() {
     }
   }
 
+  /** Envia a foto do produto; devolve a mensagem de erro para o cartão, ou null. */
+  async function enviarFoto(arquivo: File): Promise<string | null> {
+    if (!produto) return null;
+    try {
+      const caminho = await enviarFotoProduto(produto.id, arquivo);
+      setProduto((atual) => (atual ? { ...atual, foto: caminho } : atual));
+      return null;
+    } catch (erro) {
+      return mensagemErroFoto(erro);
+    }
+  }
+
+  /** Tira a foto do produto; devolve a mensagem de erro para o cartão, ou null. */
+  async function removerFoto(): Promise<string | null> {
+    if (!produto) return null;
+    try {
+      await removerFotoProduto(produto.id);
+      setProduto((atual) => (atual ? { ...atual, foto: null } : atual));
+      return null;
+    } catch (erro) {
+      return mensagemErroFoto(erro);
+    }
+  }
+
   const voltar = (
     <LinkBotao href="/produtos" variante="discreto" icone="voltar" className="mb-4 -ml-3">
       Voltar para Produtos
@@ -438,6 +468,18 @@ export default function EditarProdutoPage() {
                 salvando={salvandoPreco}
               />
             )}
+
+            {/* Envio imediato, fora dos formulários: não aciona "Sair sem salvar?". */}
+            <CartaoFoto
+              tipo="foto"
+              titulo="Foto do produto"
+              frase="Esta foto aparece na sua vitrine."
+              caminho={produto.foto}
+              alt={produto.nome}
+              idCampo="produto-foto"
+              aoEnviar={enviarFoto}
+              aoRemover={removerFoto}
+            />
 
             <CartaoNaVitrine
               produto={produto}

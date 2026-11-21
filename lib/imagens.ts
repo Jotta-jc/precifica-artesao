@@ -22,6 +22,7 @@ export type CodigoErroFoto =
   | "MUITO_GRANDE"
   | "SESSAO_EXPIRADA"
   | "ENVIO_FALHOU"
+  | "REMOCAO_FALHOU"
   | "PRODUTO_NAO_ENCONTRADO";
 
 /** Erro das fotos, com "code" como o erro do Supabase. As mensagens ficam em
