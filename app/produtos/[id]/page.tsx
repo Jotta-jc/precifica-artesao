@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   CartaoNaVitrine,
@@ -98,6 +98,31 @@ export default function EditarProdutoPage() {
   /* Cartão "Arquivar ou excluir" (mesmo padrão de Materiais). */
   const [dialogo, setDialogo] = useState<"arquivar" | "excluir" | null>(null);
   const [processando, setProcessando] = useState(false);
+  /* Faixa do nome presa no topo (sticky). */
+  const faixaRef = useRef<HTMLDivElement>(null);
+
+  /* Enquanto esta página está aberta, a rolagem reserva a altura da faixa
+     (scroll-padding-top na página): o foco no primeiro campo com erro, em
+     qualquer cartão, não deixa o campo escondido atrás dela. A altura muda
+     com nome longo ou selo "Arquivado", por isso o ResizeObserver. */
+  useEffect(() => {
+    const faixa = faixaRef.current;
+    if (!faixa) return;
+
+    const raiz = document.documentElement;
+    const ajustar = () => {
+      raiz.style.scrollPaddingTop = `${faixa.offsetHeight + 16}px`;
+    };
+
+    ajustar();
+    const observador = new ResizeObserver(ajustar);
+    observador.observe(faixa);
+
+    return () => {
+      observador.disconnect();
+      raiz.style.scrollPaddingTop = "";
+    };
+  }, [estado]);
 
   useEffect(() => {
     let ativo = true;
@@ -411,16 +436,24 @@ export default function EditarProdutoPage() {
 
       {estado === "pronto" && produto && (
         <>
-          <CabecalhoPagina
-            titulo={produto.nome}
-            subtitulo={ROTULOS_TIPO[produto.tipo]}
-          />
+          {/* Faixa presa no topo ao rolar. Ocupa a coluna inteira (margem
+              negativa = padding da página) e fica abaixo do menu inferior
+              (z-40) e dos avisos (z-[60]); o diálogo nativo fica por cima de tudo. */}
+          <div
+            ref={faixaRef}
+            className="sticky top-0 z-30 -mx-4 mb-6 border-b border-borda bg-fundo px-4 py-3 md:-mx-8 md:px-8 [&>header]:mb-0"
+          >
+            <CabecalhoPagina
+              titulo={produto.nome}
+              subtitulo={ROTULOS_TIPO[produto.tipo]}
+            />
 
-          {!produto.ativo && (
-            <p className="-mt-2 mb-6">
-              <Badge>Arquivado</Badge>
-            </p>
-          )}
+            {!produto.ativo && (
+              <p className="mt-2">
+                <Badge>Arquivado</Badge>
+              </p>
+            )}
+          </div>
 
           <div className="flex flex-col gap-6">
             <Cartao titulo="Dados do produto">
