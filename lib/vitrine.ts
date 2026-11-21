@@ -415,6 +415,20 @@ export function nomeDaVitrine(nome: string | null): string {
   return textoOuNull(nome) ?? NOME_RESERVA_VITRINE;
 }
 
+const LETRA_OU_NUMERO = /[\p{L}\p{N}]/u;
+
+/**
+ * Primeira letra ou número do nome, em maiúscula ("ateliê" → "A"), para o
+ * quadro do produto sem foto. Pula espaços, emoji e símbolos; sem letra nem
+ * número → null.
+ */
+export function inicialDoNome(nome: string): string | null {
+  for (const caractere of nome) {
+    if (LETRA_OU_NUMERO.test(caractere)) return caractere.toLocaleUpperCase("pt-BR");
+  }
+  return null;
+}
+
 /** Prazo para a página pública; aula ou sem prazo → null (não mostrar). */
 export function prazoPublico(produto: ProdutoPublico): string | null {
   if (produto.tipo === "aula" || produto.prazo === null) return null;

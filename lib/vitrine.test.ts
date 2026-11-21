@@ -5,6 +5,7 @@ import { normalizarTexto, semAcentos } from "./texto";
 import {
   ENDERECOS_RESERVADOS,
   formatarWhatsapp,
+  inicialDoNome,
   lerVitrinePublica,
   linkInstagram,
   linkWhatsapp,
@@ -358,6 +359,23 @@ describe("nomeDaVitrine", () => {
 
   it("a reserva é Vitrine do ateliê", () => {
     expect(NOME_RESERVA_VITRINE).toBe("Vitrine do ateliê");
+  });
+});
+
+describe("inicialDoNome", () => {
+  it.each([
+    ["ateliê", "A"],
+    ["  bolsa", "B"],
+    ["🌸 Flor", "F"],
+    ["123 Bolsas", "1"],
+    ["ítalo", "Í"],
+    ["--- Bag", "B"],
+  ])("%j → %j", (nome, inicial) => {
+    expect(inicialDoNome(nome)).toBe(inicial);
+  });
+
+  it.each(["🌸🌸", "", "   ", "!!!"])("sem letra nem número (%j) → null", (nome) => {
+    expect(inicialDoNome(nome)).toBeNull();
   });
 });
 

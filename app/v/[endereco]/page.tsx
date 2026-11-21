@@ -6,7 +6,10 @@ import { Badge } from "@/components/ui/Badge";
 import { Cartao } from "@/components/ui/Cartao";
 import { classeBotao, type VarianteBotao } from "@/components/ui/estiloBotao";
 import { Icone, type NomeIcone } from "@/components/ui/Icone";
+import { linkPublicoFoto } from "@/lib/imagens";
+import { NOME_SISTEMA } from "@/lib/marca";
 import {
+  inicialDoNome,
   linkInstagram,
   linkWhatsapp,
   nomeDaVitrine,
@@ -17,6 +20,14 @@ import { buscarVitrinePublica } from "@/services/vitrinePublica.server";
 
 /* Sempre na hora: "Tirar do ar" e despublicar valem na próxima visita. */
 export const dynamic = "force-dynamic";
+
+/* Endereço do projeto Supabase: a mesma variável do CartaoFoto. */
+const URL_SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+
+/** Link público da foto ou do logo no bucket (caminho vazio ou inválido → null). */
+function linkDaImagem(caminho: string | null): string | null {
+  return URL_SUPABASE ? linkPublicoFoto(URL_SUPABASE, caminho) : null;
+}
 
 interface PaginaVitrineProps {
   params: Promise<{ endereco: string }>;
@@ -94,30 +105,41 @@ export default async function PaginaVitrine({ params }: PaginaVitrineProps) {
 
   const { vitrine } = resultado;
   const nome = nomeDaVitrine(vitrine.nome_atelie);
+  const linkLogo = linkDaImagem(vitrine.logo);
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6">
-      <header className="flex flex-col gap-3">
-        <h1 className="break-words text-[28px] font-bold leading-tight text-texto md:text-[34px]">
-          {nome}
-        </h1>
-        {vitrine.sobre && (
-          <p className="whitespace-pre-line break-words text-lg text-texto-suave">
-            {vitrine.sobre}
-          </p>
-        )}
-      </header>
+    <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-6 md:px-8 md:py-10">
+      <header className="rounded-3xl border border-borda bg-cartao px-5 py-8 md:px-8 md:py-10">
+        <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 text-center">
+          {linkLogo && (
+            <>
+              {/* Foto do bucket público, já reduzida no envio (decisão Q9). */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={linkLogo}
+                alt={nome}
+                loading="lazy"
+                className="h-22 w-22 rounded-full border border-borda bg-cartao object-cover"
+              />
+            </>
+          )}
 
-      <Cartao titulo="Fale com o ateliê">
-        <div className="flex flex-col gap-4">
-          {/* O12: o número não aparece em texto, só no link do botão. */}
-          <p className="text-lg text-texto">Tire dúvidas e faça encomendas pelo WhatsApp.</p>
-          {vitrine.instagram && (
-            <p className="break-words text-lg text-texto">
-              Instagram: <strong>@{vitrine.instagram}</strong>
+          <h1 className="break-words text-[30px] font-bold leading-tight text-texto md:text-4xl">
+            {nome}
+          </h1>
+
+          <div aria-hidden="true" className="h-0.5 w-10 bg-destaque" />
+
+          {vitrine.sobre && (
+            <p className="whitespace-pre-line break-words text-lg text-texto-suave">
+              {vitrine.sobre}
             </p>
           )}
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+
+          {/* O12: o número não aparece em texto, só no link do botão. */}
+          <p className="text-lg text-texto">Tire dúvidas e faça encomendas pelo WhatsApp.</p>
+
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
             <LinkExterno href={linkWhatsapp(vitrine.whatsapp)} icone="conversa">
               Chamar no WhatsApp
             </LinkExterno>
@@ -126,13 +148,14 @@ export default async function PaginaVitrine({ params }: PaginaVitrineProps) {
                 href={linkInstagram(vitrine.instagram)}
                 variante="secundario"
                 icone="instagram"
+                rotuloAcessivel={`Ver @${vitrine.instagram} no Instagram`}
               >
                 Ver no Instagram
               </LinkExterno>
             )}
           </div>
         </div>
-      </Cartao>
+      </header>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-2xl font-bold text-texto">Produtos</h2>
@@ -140,13 +163,39 @@ export default async function PaginaVitrine({ params }: PaginaVitrineProps) {
         {vitrine.produtos.length === 0 ? (
           <p className="text-lg text-texto-suave">Ainda não há produtos na vitrine.</p>
         ) : (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {vitrine.produtos.map((produto) => {
               const prazo = prazoPublico(produto);
+              const linkFoto = linkDaImagem(produto.foto);
+              const inicial = inicialDoNome(produto.nome);
 
               return (
                 <li key={produto.id} className="min-w-0">
                   <Cartao className="flex h-full flex-col gap-3">
+                    {linkFoto ? (
+                      <>
+                        {/* Foto do bucket público, já reduzida no envio (decisão Q9). */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={linkFoto}
+                          alt={produto.nome}
+                          loading="lazy"
+                          className="aspect-square w-full rounded-2xl border border-borda bg-cartao object-cover"
+                        />
+                      </>
+                    ) : (
+                      <div
+                        aria-hidden="true"
+                        className="flex aspect-square w-full items-center justify-center rounded-2xl border border-borda bg-destaque-suave"
+                      >
+                        {inicial ? (
+                          <span className="text-5xl font-bold text-destaque-escuro">{inicial}</span>
+                        ) : (
+                          <Icone nome="vitrine" tamanho={56} className="text-destaque" />
+                        )}
+                      </div>
+                    )}
+
                     <h3 className="break-words text-xl font-bold text-texto">{produto.nome}</h3>
                     {produto.tipo === "aula" && (
                       <div>
@@ -178,6 +227,10 @@ export default async function PaginaVitrine({ params }: PaginaVitrineProps) {
           </ul>
         )}
       </section>
+
+      <footer className="border-t border-borda pt-6 text-center text-base text-texto-suave">
+        Vitrine feita com {NOME_SISTEMA}
+      </footer>
     </div>
   );
 }
