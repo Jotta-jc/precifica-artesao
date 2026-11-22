@@ -10,6 +10,7 @@ const hiddenSidebarRoutes = [
   "/login",
   "/auth/callback",
   "/v/",
+  "/privacidade",
 ];
 
 export function AppShell({

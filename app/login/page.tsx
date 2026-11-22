@@ -11,6 +11,8 @@ import {
   useSearchParams,
 } from "next/navigation";
 
+import Link from "next/link";
+
 import { FRASE_SISTEMA, NOME_SISTEMA } from "@/lib/marca";
 import { createClient } from "@/lib/supabase/client";
 
@@ -174,13 +176,16 @@ async function loginGoogle() {
           className="
             mt-6
             text-center
-            text-sm
+            text-base
             leading-relaxed
-            text-slate-400
+            text-slate-500
           "
         >
-          Ao entrar você acessa sua
-          central estratégica artesanal.
+          Ao entrar, você concorda com a nossa{" "}
+          <Link href="/privacidade" className="underline">
+            Política de privacidade
+          </Link>
+          .
         </p>
       </div>
     </main>

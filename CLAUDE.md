@@ -102,7 +102,9 @@ types/        tipos; vários arquivos ainda vazios
 middleware.ts proteção de rotas
 ```
 
-Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora-rapida`, `/empresa/termometro`, `/empresa/vitrine`, `/v/[endereco]` (pública).
+Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `/clientes/[id]`, `/clientes/[id]/editar`, `/pedidos`, `/pedidos/[id]`, `/produtos`, `/produtos/[id]`, `/materiais`, `/estoque`, `/calculadora-rapida`, `/empresa/termometro`, `/empresa/vitrine`, `/v/[endereco]` (pública), `/privacidade` (pública).
+
+Política de privacidade: `/privacidade` é componente de servidor, público e sem menu (`AppShell`). O middleware libera só o caminho exato (`pathname === "/privacidade"`), antes do `getUser`. O login e o rodapé da vitrine levam até ela. **A política descreve o que o sistema faz; qualquer mudança em dados coletados, fornecedores, vitrine ou fotos exige atualizar `app/privacidade/page.tsx` e a data. Não prometer o que o sistema não faz (ex.: guarda de registros de acesso por 6 meses ainda não existe).**
 
 Vitrine (Jornada 3, V3b): `/empresa/vitrine` edita endereço, WhatsApp, Instagram e "sobre", publica ou tira do ar (aberta pelo menu "Vitrine" e pelo cartão "Sua vitrine" em Dados do ateliê, que fica fora do formulário). Rota privada. Com a vitrine SALVA publicada, as duas telas mostram "Ver minha vitrine" (nova aba, endereço salvo).
 
@@ -115,7 +117,7 @@ Cálculo rápido (Etapa 10): `/calculadora-rapida` faz a conta de uma peça ou a
 Fatos importantes:
 
 - O layout raiz (`app/layout.tsx`) é Server Component; o `AppShell` (menus e avisos) é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador; o cliente de servidor (`lib/supabase/server.ts`) só é usado no retorno do login. A página pública `/v/[endereco]` roda no servidor com o cliente público `lib/supabase/publico.ts` (sem sessão, sempre `anon`).
-- Nome e frase do sistema ficam em `lib/marca.ts`: `NOME_SISTEMA` ("AteliX") e `FRASE_SISTEMA` ("Sistema para artesãos"). As telas usam essas constantes, nunca o nome escrito direto.
+- Nome e frase do sistema ficam em `lib/marca.ts`: `NOME_SISTEMA` ("AteliX"), `FRASE_SISTEMA` ("Sistema para artesãos"), `RESPONSAVEL_SISTEMA` ("JC Gestão Criativa"), `CNPJ_RESPONSAVEL`, `CIDADE_RESPONSAVEL` ("Curitiba/PR") e `EMAIL_CONTATO` (provisório, até o e-mail do domínio). As telas usam essas constantes, nunca o nome ou o e-mail escritos direto.
 - A página `/` só redireciona para `/dashboard` (quem não está logado vai antes para `/login` pelo middleware).
 - Os componentes de produto ficam em `components/produtos/` (a pasta antiga `components/products/` foi removida na Etapa 8).
 - Há cerca de 80 `console.*` de diagnóstico e, em 21/11/2026, 13 problemas de lint (10 erros e 3 avisos). Não corrija fora do escopo do prompt.

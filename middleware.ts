@@ -13,6 +13,11 @@ export async function middleware(
     return NextResponse.next();
   }
 
+  /* Política de privacidade: pública, só o caminho exato. */
+  if (request.nextUrl.pathname === "/privacidade") {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next();
 
   const supabase =

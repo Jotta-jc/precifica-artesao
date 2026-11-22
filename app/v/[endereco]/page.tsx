@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -236,7 +237,10 @@ export default async function PaginaVitrine({ params }: PaginaVitrineProps) {
       </section>
 
       <footer className="border-t border-borda pt-6 text-center text-base text-texto-suave">
-        Vitrine feita com {NOME_SISTEMA}
+        Vitrine feita com {NOME_SISTEMA} ·{" "}
+        <Link href="/privacidade" className="underline">
+          Privacidade
+        </Link>
       </footer>
     </div>
   );
