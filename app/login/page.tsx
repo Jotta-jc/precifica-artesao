@@ -11,7 +11,7 @@ import {
   useSearchParams,
 } from "next/navigation";
 
-import { NOME_SISTEMA } from "@/lib/marca";
+import { FRASE_SISTEMA, NOME_SISTEMA } from "@/lib/marca";
 import { createClient } from "@/lib/supabase/client";
 
 function AvisoErroLogin() {
@@ -124,14 +124,23 @@ async function loginGoogle() {
 
           <p
             className="
+              mt-2
+              text-lg
+              text-slate-900
+            "
+          >
+            {FRASE_SISTEMA}
+          </p>
+
+          <p
+            className="
               mt-4
               text-lg
               leading-relaxed
               text-slate-500
             "
           >
-            Organize e precifique o seu
-            trabalho artesanal
+            Organize, precifique e venda o seu trabalho artesanal.
           </p>
         </div>
 

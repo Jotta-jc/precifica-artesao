@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# CLAUDE.md — Precifica+
+# CLAUDE.md — AteliX
 
 Instruções permanentes para o Claude Code neste repositório.
 Leia este arquivo inteiro antes de qualquer tarefa.
@@ -9,7 +9,7 @@ Leia este arquivo inteiro antes de qualquer tarefa.
 
 ## 1. O produto
 
-**Precifica+** (nome provisório; o nome final será definido para registro de domínio) é um sistema web de gestão e precificação vendido como serviço para **qualquer artesão**: crochê, costura, bijuteria, sabonetes, velas, cerâmica etc.
+**AteliX — Sistema para artesãos** (nome definido em 22/11/2026; antes 'Precifica+', provisório; domínio atelix.com.br) é um sistema web de gestão e precificação vendido como serviço para **qualquer artesão**: crochê, costura, bijuteria, sabonetes, velas, cerâmica etc.
 
 - Público inicial: mais de 1.000 alunas de um curso de crochê de bolsas, muitas com **mais de 60 anos**.
 - Uso principal no **celular**, mas tudo deve funcionar no computador.
@@ -115,6 +115,7 @@ Cálculo rápido (Etapa 10): `/calculadora-rapida` faz a conta de uma peça ou a
 Fatos importantes:
 
 - O layout raiz (`app/layout.tsx`) é Server Component; o `AppShell` (menus e avisos) é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador; o cliente de servidor (`lib/supabase/server.ts`) só é usado no retorno do login. A página pública `/v/[endereco]` roda no servidor com o cliente público `lib/supabase/publico.ts` (sem sessão, sempre `anon`).
+- Nome e frase do sistema ficam em `lib/marca.ts`: `NOME_SISTEMA` ("AteliX") e `FRASE_SISTEMA` ("Sistema para artesãos"). As telas usam essas constantes, nunca o nome escrito direto.
 - A página `/` só redireciona para `/dashboard` (quem não está logado vai antes para `/login` pelo middleware).
 - Os componentes de produto ficam em `components/produtos/` (a pasta antiga `components/products/` foi removida na Etapa 8).
 - Há cerca de 80 `console.*` de diagnóstico e, em 21/11/2026, 13 problemas de lint (10 erros e 3 avisos). Não corrija fora do escopo do prompt.
@@ -123,7 +124,7 @@ Fatos importantes:
 
 ## 5. Banco de dados (auditado em 14/11/2026)
 
-**Infraestrutura (decidido em 15/11/2026):** o Precifica+ é um produto vendido a terceiros e usa um projeto Supabase PRÓPRIO, com login próprio. Ele nunca deve ser ligado ao projeto `jc-empresa` nem a outros sistemas internos da JC.
+**Infraestrutura (decidido em 15/11/2026):** o AteliX é um produto vendido a terceiros e usa um projeto Supabase PRÓPRIO, com login próprio. Ele nunca deve ser ligado ao projeto `jc-empresa` nem a outros sistemas internos da JC.
 
 **Sempre confira o schema real antes de escrever consultas.** A referência do schema (14/11/2026) está em `supabase/migrations/20261114000000_baseline_referencia.sql`. As migrations posteriores, na mesma pasta, mostram o que mudou desde então.
 

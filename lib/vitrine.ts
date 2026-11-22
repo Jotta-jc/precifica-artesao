@@ -67,6 +67,7 @@ export const ENDERECOS_RESERVADOS: readonly string[] = [
   "vitrines",
   "precifica",
   "ateliefacil",
+  "atelix",
 ];
 
 /** Tira o "-" do começo e do fim e junta hífens repetidos. */

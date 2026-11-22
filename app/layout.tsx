@@ -5,7 +5,7 @@ import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
 
 import { AppShell } from "@/components/layout/AppShell";
-import { NOME_SISTEMA } from "@/lib/marca";
+import { FRASE_SISTEMA, NOME_SISTEMA } from "@/lib/marca";
 
 /* Fonte variável (sem fixar pesos): permite 400, 500, 600 e 700. */
 const fontePrincipal = Nunito_Sans({
@@ -15,8 +15,7 @@ const fontePrincipal = Nunito_Sans({
 
 export const metadata: Metadata = {
   title: NOME_SISTEMA,
-  description:
-    "Organize e precifique o seu trabalho artesanal",
+  description: `${FRASE_SISTEMA}: organize, precifique e venda o seu trabalho artesanal.`,
 };
 
 /* viewportFit "cover": a página ocupa a tela toda no iPhone, e
