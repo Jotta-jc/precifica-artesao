@@ -109,8 +109,10 @@ export default async function PaginaVitrine({ params }: PaginaVitrineProps) {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-6 md:px-8 md:py-10">
-      <header className="rounded-3xl border border-borda bg-cartao px-5 py-8 md:px-8 md:py-10">
-        <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 text-center">
+      {/* Abaixo de lg: tudo centralizado, um embaixo do outro. A partir de lg:
+          faixa horizontal (logo | nome e "Sobre" | contato). */}
+      <header className="rounded-3xl border border-borda bg-cartao px-5 py-6 md:px-8 lg:py-6">
+        <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-3 text-center lg:max-w-none lg:flex-row lg:items-center lg:gap-6 lg:text-left">
           {linkLogo && (
             <>
               {/* Foto do bucket público, já reduzida no envio (decisão Q9). */}
@@ -119,40 +121,45 @@ export default async function PaginaVitrine({ params }: PaginaVitrineProps) {
                 src={linkLogo}
                 alt={nome}
                 loading="lazy"
-                className="h-22 w-22 rounded-full border border-borda bg-cartao object-cover"
+                className="h-22 w-22 shrink-0 rounded-full border border-borda bg-cartao object-cover lg:h-18 lg:w-18"
               />
             </>
           )}
 
-          <h1 className="break-words text-[30px] font-bold leading-tight text-texto md:text-4xl">
-            {nome}
-          </h1>
+          <div className="flex w-full min-w-0 flex-col items-center gap-3 lg:flex-1 lg:items-start">
+            <h1 className="break-words text-[30px] font-bold leading-tight text-texto md:text-4xl">
+              {nome}
+            </h1>
 
-          <div aria-hidden="true" className="h-0.5 w-10 bg-destaque" />
+            <div aria-hidden="true" className="mx-auto h-0.5 w-10 bg-destaque lg:mx-0" />
 
-          {vitrine.sobre && (
-            <p className="whitespace-pre-line break-words text-lg text-texto-suave">
-              {vitrine.sobre}
-            </p>
-          )}
-
-          {/* O12: o número não aparece em texto, só no link do botão. */}
-          <p className="text-lg text-texto">Tire dúvidas e faça encomendas pelo WhatsApp.</p>
-
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-            <LinkExterno href={linkWhatsapp(vitrine.whatsapp)} icone="conversa">
-              Chamar no WhatsApp
-            </LinkExterno>
-            {vitrine.instagram && (
-              <LinkExterno
-                href={linkInstagram(vitrine.instagram)}
-                variante="secundario"
-                icone="instagram"
-                rotuloAcessivel={`Ver @${vitrine.instagram} no Instagram`}
-              >
-                Ver no Instagram
-              </LinkExterno>
+            {vitrine.sobre && (
+              <p className="whitespace-pre-line break-words text-lg text-texto-suave">
+                {vitrine.sobre}
+              </p>
             )}
+          </div>
+
+          <div className="flex w-full flex-col items-center gap-3 lg:w-auto lg:shrink-0 lg:items-end lg:text-right">
+            {/* O12: o número não aparece em texto, só no link do botão. */}
+            <p className="text-lg text-texto">Tire dúvidas e faça encomendas pelo WhatsApp.</p>
+
+            {/* lg: um botão sobre o outro, os dois na largura do bloco. */}
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:flex-col lg:flex-nowrap">
+              <LinkExterno href={linkWhatsapp(vitrine.whatsapp)} icone="conversa">
+                Chamar no WhatsApp
+              </LinkExterno>
+              {vitrine.instagram && (
+                <LinkExterno
+                  href={linkInstagram(vitrine.instagram)}
+                  variante="secundario"
+                  icone="instagram"
+                  rotuloAcessivel={`Ver @${vitrine.instagram} no Instagram`}
+                >
+                  Ver no Instagram
+                </LinkExterno>
+              )}
+            </div>
           </div>
         </div>
       </header>

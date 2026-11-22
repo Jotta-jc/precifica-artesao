@@ -106,7 +106,7 @@ Rotas: `/`, `/login`, `/auth/callback`, `/dashboard`, `/empresa`, `/clientes`, `
 
 Vitrine (Jornada 3, V3b): `/empresa/vitrine` edita endereço, WhatsApp, Instagram e "sobre", publica ou tira do ar (aberta pelo menu "Vitrine" e pelo cartão "Sua vitrine" em Dados do ateliê, que fica fora do formulário). Rota privada. Com a vitrine SALVA publicada, as duas telas mostram "Ver minha vitrine" (nova aba, endereço salvo).
 
-Vitrine pública (V5): `/v/[endereco]` é componente de servidor, `force-dynamic`, noindex, sem menu (`AppShell`) e com `not-found.tsx` próprio (inexistente e fora do ar dão a mesma tela). Lê pela `services/vitrinePublica.server.ts` (só servidor; `cache` do React só na mesma montagem) com `lib/supabase/publico.ts`: cliente sem cookies, sempre `anon`, SÓ para a vitrine pública. O número do WhatsApp não aparece em texto, só no link do botão (O12). Visual V6d: cabeçalho em cartão com logo redondo, nome, "Sobre" e os botões de contato; cartões de produto com foto quadrada ou a inicial (`inicialDoNome`) quando não há foto; 1, 2 ou 3 colunas (celular, `sm`, `lg`); rodapé "Vitrine feita com `NOME_SISTEMA`"; `<img>` comum (Q9). O middleware deixa `/v/` (com barra) passar antes do `getUser`; `/v` e `/vitrine` continuam exigindo login.
+Vitrine pública (V5): `/v/[endereco]` é componente de servidor, `force-dynamic`, noindex, sem menu (`AppShell`) e com `not-found.tsx` próprio (inexistente e fora do ar dão a mesma tela). Lê pela `services/vitrinePublica.server.ts` (só servidor; `cache` do React só na mesma montagem) com `lib/supabase/publico.ts`: cliente sem cookies, sempre `anon`, SÓ para a vitrine pública. O número do WhatsApp não aparece em texto, só no link do botão (O12). Visual V6d: cabeçalho em cartão com logo redondo, nome, "Sobre" e os botões de contato (W4: centralizado e compacto no celular e no tablet; a partir de `lg`, faixa horizontal com logo à esquerda, nome e "Sobre" no meio e a frase do WhatsApp com os botões empilhados à direita); cartões de produto com foto quadrada ou a inicial (`inicialDoNome`) quando não há foto; 1, 2 ou 3 colunas (celular, `sm`, `lg`); rodapé "Vitrine feita com `NOME_SISTEMA`"; `<img>` comum (Q9). O middleware deixa `/v/` (com barra) passar antes do `getUser`; `/v` e `/vitrine` continuam exigindo login.
 
 Termômetro da marca (Etapa 11): `/empresa/termometro` tem as 5 perguntas do mês atual, mostra os pontos e o nível sugerido e, com um clique, salva as respostas e muda o nível da marca (aberto pelo cartão "Sua marca" em Dados do ateliê).
 
@@ -241,6 +241,7 @@ Custo da peça = materiais (ficha técnica × custo_por_unidade) + tempo (horas 
 ### Interface: requisitos obrigatórios (público 60+ e celular)
 
 - **Celular primeiro.** Toda tela deve funcionar a partir de 360px de largura, sem rolagem horizontal da página.
+- Larguras no computador (W1): formulários e telas de um item com `max-w-3xl`; Início e cliente com `max-w-5xl`; listas com tabela (materiais, estoque, produtos, clientes) com `max-w-7xl`; vitrine pública com `max-w-6xl`. Pedidos ainda é tela antiga, sem largura máxima.
 - Fonte de conteúdo com no mínimo 16px; prefira 18px para textos importantes. Evite `text-xs` e `text-sm` em conteúdo.
 - Botões e áreas de toque com no mínimo 44px de altura (de preferência 48px).
 - Todo campo com rótulo visível (`<label htmlFor>`), não só texto de exemplo.

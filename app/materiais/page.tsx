@@ -124,7 +124,7 @@ export default function MateriaisPage() {
     (precisamComprar.length > 3 ? ` e mais ${precisamComprar.length - 3}` : "");
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+    <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-10">
       <CabecalhoPagina
         titulo="Materiais"
         subtitulo="O que você compra para produzir"

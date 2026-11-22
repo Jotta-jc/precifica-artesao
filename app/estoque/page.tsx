@@ -71,7 +71,7 @@ export default function EstoquePage() {
     .map((m) => ({ valor: String(m.id), rotulo: m.nome }));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+    <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-10">
       <CabecalhoPagina
         titulo="Estoque"
         subtitulo="Compras, usos e correções dos seus materiais"
