@@ -74,9 +74,11 @@ Repositório: `github.com/Jotta-jc/precifica-artesao`, branch `main`.
 | @supabase/supabase-js | 2.105.4 |
 | @supabase/ssr | 0.10.3 |
 | eslint | 9.39.4 |
+| vitest | 4.1.12 (testes das funções puras de `lib/`) |
 
-- **Não instalados:** Zod, TanStack Table, React Hook Form e qualquer biblioteca de testes. Se precisar, avise; não instale. O Zod aparece em node_modules apenas como peça interna do ESLint; não é dependência do projeto e não deve ser importado sem autorização.
-- Scripts: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`.
+- **Testes:** Vitest 4 instalado; rode `npm test` (371 testes em 21/11/2026).
+- **Não instalados:** Zod, TanStack Table, React Hook Form e outras bibliotecas de testes além do Vitest. Se precisar, avise; não instale. O Zod aparece em node_modules apenas como peça interna do ESLint; não é dependência do projeto e não deve ser importado sem autorização.
+- Scripts: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`, `npm test`.
 - Use `npm run build` para validar tipos e compilação ao final de cada tarefa.
 - Autenticação: Supabase Auth, só login com Google hoje (`/login` → `/auth/callback`). Falhas no retorno levam a `/login?erro=login`, com aviso na tela. O callback não registra código, URL nem sessão em log.
 - O `.env.local` usa a chave `anon` antiga (legada) do Supabase, que será desativada no início de 2027. A troca pela chave "publishable" nova está planejada. Ao fazer essa troca, criar uma chave publishable NOVA no painel e desativar a antiga, que constava em documentos .docx no histórico do Git (já retirados do repositório).
@@ -93,7 +95,8 @@ app/          páginas e rotas (App Router)
 components/   componentes
   crud/ forms/ ui/   em grande parte ARQUIVOS VAZIOS (reservados para o futuro kit visual)
   produtos/   componentes de produto em uso (FormularioProduto, FichaTecnica, PainelPreco)
-lib/supabase/ client.ts (navegador) e server.ts (servidor)
+  fotos/      CartaoFoto (foto do produto e logo do ateliê)
+lib/supabase/ client.ts (navegador), server.ts (servidor) e publico.ts (cliente público sem sessão, só para a vitrine)
 services/     acesso a dados; vários arquivos ainda vazios
 types/        tipos; vários arquivos ainda vazios
 middleware.ts proteção de rotas
@@ -111,10 +114,10 @@ Cálculo rápido (Etapa 10): `/calculadora-rapida` faz a conta de uma peça ou a
 
 Fatos importantes:
 
-- O layout raiz (`app/layout.tsx`) é Server Component; o `AppShell` (menus e avisos) é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador; o cliente de servidor (`lib/supabase/server.ts`) só é usado no retorno do login.
+- O layout raiz (`app/layout.tsx`) é Server Component; o `AppShell` (menus e avisos) é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador; o cliente de servidor (`lib/supabase/server.ts`) só é usado no retorno do login. A página pública `/v/[endereco]` roda no servidor com o cliente público `lib/supabase/publico.ts` (sem sessão, sempre `anon`).
 - A página `/` só redireciona para `/dashboard` (quem não está logado vai antes para `/login` pelo middleware).
 - Os componentes de produto ficam em `components/produtos/` (a pasta antiga `components/products/` foi removida na Etapa 8).
-- Há cerca de 80 `console.*` de diagnóstico e 36 erros de lint. Não corrija fora do escopo do prompt.
+- Há cerca de 80 `console.*` de diagnóstico e, em 21/11/2026, 13 problemas de lint (10 erros e 3 avisos). Não corrija fora do escopo do prompt.
 
 ---
 
@@ -129,8 +132,9 @@ Fatos importantes:
 - **RLS ativo em todas as tabelas**, com policies de isolamento por usuária (`auth.uid() = user_id`).
 - Tabelas filhas são protegidas pela mãe: `order_items` pelo pedido, `product_materials` pelo produto.
 - O visitante não logado (`anon`) não tem acesso a nenhuma tabela. Usuárias logadas (`authenticated`) têm só SELECT, INSERT, UPDATE e DELETE. Nunca conceda acesso a `anon`.
-- **Regra L11 (migration 20261120090000):** tabelas, sequências e funções criadas pelo papel `postgres` no esquema `public` não nascem mais com acesso do `anon` (default privileges). Além disso, por uma regra GLOBAL (o `EXECUTE` de `PUBLIC` em funções novas é padrão global do Postgres), toda função nova criada pelo `postgres` nasce sem execute para ninguém além do dono: **cada migration que cria função precisa de `grant execute ... to authenticated` explícito** (ou `to anon`, só na função pública da vitrine). As funções que já existiam não mudaram. Mesmo assim, toda migration nova continua com o seu `revoke ... from anon` explícito. As funções de gatilho `handle_new_user` e `set_updated_at` não podem ser chamadas diretamente (execute revogado de public, anon e authenticated); os gatilhos continuam funcionando. A única exceção futura para o visitante será a função pública da vitrine (etapa V4), liberada de propósito.
+- **Regra L11 (migration 20261120090000):** tabelas, sequências e funções criadas pelo papel `postgres` no esquema `public` não nascem mais com acesso do `anon` (default privileges). Além disso, por uma regra GLOBAL (o `EXECUTE` de `PUBLIC` em funções novas é padrão global do Postgres), toda função nova criada pelo `postgres` nasce sem execute para ninguém além do dono: **cada migration que cria função precisa de `grant execute ... to authenticated` explícito** (ou `to anon`, só na função pública da vitrine). As funções que já existiam não mudaram. Mesmo assim, toda migration nova continua com o seu `revoke ... from anon` explícito. As funções de gatilho `handle_new_user` e `set_updated_at` não podem ser chamadas diretamente (execute revogado de public, anon e authenticated); os gatilhos continuam funcionando. A única exceção para o visitante é a função pública da vitrine, `vitrine_publica(p_endereco)`, liberada de propósito: criada na V4 e recriada na V6a, sempre com `revoke` + `grant`. É a única função que o `anon` executa (conferido no banco na V7).
 - **Função pública da vitrine (migration 20261120120000):** `public.vitrine_publica(p_endereco text)` → `jsonb`: única função do `anon`; `security definer`, `search_path` vazio, campos um a um; `null` se não existe ou não publicada; `preco` só com `mostrar_preco` e > 0; aula sem prazo; categoria fora por enquanto; `grant execute` só para `anon` e `authenticated`. Toda mudança nela traz `revoke` + `grant` (L11). Desde a migration 20261120200000 devolve também `logo` (vitrine) e `foto` (produto), só como caminho no bucket.
+- **Pendência (T3):** o `middleware.ts` usa `startsWith` sem barra em `/login` e `/auth/callback`, então um endereço como `/login-qualquer` passaria sem login (hoje não existe nenhuma rota assim). Corrigir na troca para `proxy.ts`.
 - **Fotos e logo (migration 20261120200000, V6a):** bucket `vitrine` público para leitura, só JPEG, até 2 MB. Caminhos `<user_id>/produtos/<id do produto>-<data-hora>.jpg` e `<user_id>/logo-<data-hora>.jpg` (nome novo a cada envio). Colunas `products.foto` e `business_metrics.logo` guardam o caminho; as restrições `products_foto_formato` e `business_metrics_logo_formato` conferem o formato e que a pasta é o `user_id` da linha. Policies `vitrine_fotos_*` em `storage.objects` só para `authenticated`, cada conta só na própria pasta. **Nunca criar policy de storage para `anon`** nem mexer nos grants das tabelas do schema `storage`.
 - **Fotos no código (V6b):** `lib/imagens.ts` (puro, com testes) tem as constantes (foto 1200px, logo 600px, JPEG 0,8, 2 MB), `ErroFoto`, `medidasReduzidas`, os caminhos (`caminhoFotoProduto`, `caminhoLogo`, as mesmas regex do banco) e `linkPublicoFoto`. `lib/reduzirImagem.ts` (só navegador) reduz pelo canvas, com fundo branco; HEIC não é convertido. `services/fotos.service.ts` envia e remove a foto do produto e o logo, sempre na ordem **subir o arquivo novo → gravar o caminho → só então apagar o antigo** (falha ao gravar apaga o novo; falha ao apagar o antigo só vai para o log). Excluir produto apaga a foto depois da linha; arquivar mantém. `updateProduto`, `salvarVitrineProduto`, `salvarConfiguracoesAtelie` e `salvarNivelMarca` nunca gravam foto nem logo.
 - **Telas de foto (V6c1):** `components/fotos/CartaoFoto.tsx` (tipo `foto` ou `logo`) envia na hora em que a artesã escolhe, sempre FORA dos formulários (não aciona "Sair sem salvar?"); botões "Escolher / Trocar / Remover", com confirmação para remover. Erro ao tirar a foto ou o logo é `REMOCAO_FALHOU`. O cartão "Foto do produto" fica em `/produtos/[id]`, entre o `PainelPreco` e o "Na vitrine". O cartão "Logo do ateliê" (V6c2) fica em `/empresa`, fora do `<form>`, logo depois dele e antes de "Sua vitrine"; o logo tem estado próprio e não entra no "Sair sem salvar?".
@@ -195,7 +199,10 @@ As telas de clientes, produtos e materiais tratam o código `23503` com mensagem
 - A fórmula de preço existe hoje em 4 versões diferentes no código. **Não crie uma quinta.** A metodologia oficial será decidida pelo proprietário.
 - Margem e markup são diferentes. Margem é sobre o preço de venda; markup é sobre o custo.
 - Não prometa IA na interface. As telas antigas "Configurações IA" e "Calculadora Inteligente", que não usavam IA, foram desligadas na Etapa 8.
-- **Vitrine pública (Jornada 3):** o visitante (`anon`) continua SEM acesso às tabelas. A vitrine lerá apenas uma função ou view própria que entrega só os campos públicos (nome, descrição, foto, preço ou "sob consulta", prazo; a categoria fica fora por enquanto) dos produtos marcados como publicados, e os dados de contato do ateliê. Nunca expõe custo, margem, materiais, estoque, clientes ou pedidos. Essa exceção será desenhada e revisada em tarefa própria; não libere acesso de `anon` a tabelas para "resolver" a vitrine.
+- **Vitrine pública (Jornada 3):** o visitante (`anon`) continua SEM acesso às tabelas. A vitrine lê apenas a função própria `vitrine_publica`, que entrega só os campos públicos (nome, descrição, foto, preço ou "sob consulta", prazo; a categoria fica fora por enquanto) dos produtos marcados como publicados, e os dados de contato do ateliê. Nunca expõe custo, margem, materiais, estoque, clientes ou pedidos. Essa exceção foi desenhada e revisada em tarefas próprias (V4 e V7); não libere acesso de `anon` a tabelas para "resolver" a vitrine.
+- **Revisão de segurança V7 (21/11/2026):** conferido no código, no banco (como `anon`) e na janela anônima. O visitante recebe só `endereco`, `nome_atelie`, `logo`, `whatsapp`, `instagram`, `sobre` e, nos produtos, `id`, `nome`, `tipo`, `descricao`, `foto`, `preco`, `prazo` e `prazo_dias`. O `anon` não tem acesso a tabelas, e a `lerVitrinePublica` usa uma lista fechada de campos (campo a mais vindo do banco é descartado).
+  - **Risco aceito (T1):** o link público da foto e do logo leva o `user_id` e o id do produto (`<user_id>/produtos/<id>-<ms>.jpg`). O uuid não é segredo, e o RLS e as policies continuam protegendo os dados. O id do produto (sequencial) também sai na resposta da função (usado só como `key`); aceito pelo mesmo motivo (no máximo permite estimar quantos produtos a conta tem).
+  - **Riscos aceitos já registrados:** o número do WhatsApp vai no link do botão (O12); a foto de um produto não publicado abre para quem tiver o link (Q2).
 - **Vitrine — regras no código (V2):** `lib/vitrine.ts` tem as funções puras (endereço, WhatsApp, Instagram, textos de preço e prazo, validações) e `lib/texto.ts` a normalização de texto (sem acento, minúsculas), usada também na busca de produtos. O service da V3 grava o `whatsapp` só com dígitos (`normalizarWhatsapp`), o `instagram` normalizado (`normalizarInstagram`) e campo vazio como `null` (nunca `""`). A lista de endereços reservados (`ENDERECOS_RESERVADOS`) só existe no código, não no banco. Para a página pública (V5a): `formatarWhatsapp` (tira o 55, mostra (41) 99999-9999), `lerVitrinePublica` (confere o retorno de `vitrine_publica` campo a campo), `nomeDaVitrine` (reserva "Vitrine do ateliê"), `prazoPublico` (aula sem prazo) e `precoPublico`.
 - **Vitrine — services (V3a):** `services/vitrine.service.ts` tem `buscarMinhaVitrine`, `salvarVitrine` (upsert por `user_id`; 23505 vira "endereço já em uso") e `tirarVitrineDoAr`, com `ErroVitrine` e `mensagemErroVitrine`. Os campos de vitrine do produto são gravados por `salvarVitrineProduto` (`services/produtos.service.ts`), separada do `updateProduto`.
 - **Vitrine — cartão do produto (V3c):** `components/produtos/CartaoNaVitrine.tsx` fica em `/produtos/[id]`, entre o painel de preço e "Arquivar ou excluir": mostrar na vitrine, descrição, preço ou "sob consulta" e prazo (só peça física), com prévia; a página carrega a vitrine à parte e grava com `salvarVitrineProduto`.
@@ -258,10 +265,10 @@ O plano completo (Roadmap) é mantido pelo arquiteto. Resumo das fases:
 
 1. Fundação segura e base do banco para escala ✅
 2. Protótipo visual ✅ (aprovado)
-3. **Kit visual e menu novo** ← fase atual
-4. Jornada 1 — Materiais (compras, estoque, unidades de compra × uso)
-5. Jornada 2 — Produtos (categorias de produto, ficha técnica, preço único)
-6. Jornada 3 — Vitrine pública, pedidos e clientes
+3. Kit visual e menu novo ✅
+4. Jornada 1 — Materiais (compras, estoque, unidades de compra × uso) ✅
+5. Jornada 2 — Produtos (categorias de produto, ficha técnica, preço único) ✅
+6. **Jornada 3 — Vitrine pública, pedidos e clientes** ← fase atual: Vitrine concluída (V0–V7); próximo: push, teste com alunas, Pedidos
 7. Início com os números do negócio
 8. Pronto para vender (login por e-mail, LGPD, domínio, publicação, cobrança)
 9. IA (opcional)
