@@ -2,7 +2,7 @@
 export const NOME_SISTEMA = "AteliX";
 
 /** Frase que acompanha o nome (login e descrição do site). */
-export const FRASE_SISTEMA = "Sistema para artesãos";
+export const FRASE_SISTEMA = "Gestão completa para artesãos";
 
 /** Quem mantém o sistema (Política de privacidade). */
 export const RESPONSAVEL_SISTEMA = "JC Gestão Criativa";

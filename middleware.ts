@@ -18,6 +18,14 @@ export async function middleware(
     return NextResponse.next();
   }
 
+  /* Ícones da aba e do celular: públicos, só os caminhos exatos. */
+  if (
+    request.nextUrl.pathname === "/icon.png" ||
+    request.nextUrl.pathname === "/apple-icon.png"
+  ) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next();
 
   const supabase =

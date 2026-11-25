@@ -9,7 +9,7 @@ Leia este arquivo inteiro antes de qualquer tarefa.
 
 ## 1. O produto
 
-**AteliX — Sistema para artesãos** (nome definido em 22/11/2026; antes 'Precifica+', provisório; domínio atelix.com.br) é um sistema web de gestão e precificação vendido como serviço para **qualquer artesão**: crochê, costura, bijuteria, sabonetes, velas, cerâmica etc.
+**AteliX — Gestão completa para artesãos** (nome definido em 22/11/2026; antes 'Precifica+', provisório; domínio atelix.com.br) é um sistema web de gestão e precificação vendido como serviço para **qualquer artesão**: crochê, costura, bijuteria, sabonetes, velas, cerâmica etc.
 
 - Público inicial: mais de 1.000 alunas de um curso de crochê de bolsas, muitas com **mais de 60 anos**.
 - Uso principal no **celular**, mas tudo deve funcionar no computador.
@@ -117,7 +117,8 @@ Cálculo rápido (Etapa 10): `/calculadora-rapida` faz a conta de uma peça ou a
 Fatos importantes:
 
 - O layout raiz (`app/layout.tsx`) é Server Component; o `AppShell` (menus e avisos) é `"use client"`. Hoje quase todas as consultas ao banco rodam no navegador; o cliente de servidor (`lib/supabase/server.ts`) só é usado no retorno do login. A página pública `/v/[endereco]` roda no servidor com o cliente público `lib/supabase/publico.ts` (sem sessão, sempre `anon`).
-- Nome e frase do sistema ficam em `lib/marca.ts`: `NOME_SISTEMA` ("AteliX"), `FRASE_SISTEMA` ("Sistema para artesãos"), `RESPONSAVEL_SISTEMA` ("JC Gestão Criativa"), `CNPJ_RESPONSAVEL`, `CIDADE_RESPONSAVEL` ("Curitiba/PR") e `EMAIL_CONTATO` (provisório, até o e-mail do domínio). As telas usam essas constantes, nunca o nome ou o e-mail escritos direto.
+- Nome e frase do sistema ficam em `lib/marca.ts`: `NOME_SISTEMA` ("AteliX"), `FRASE_SISTEMA` ("Gestão completa para artesãos"), `RESPONSAVEL_SISTEMA` ("JC Gestão Criativa"), `CNPJ_RESPONSAVEL`, `CIDADE_RESPONSAVEL` ("Curitiba/PR") e `EMAIL_CONTATO` (provisório, até o e-mail do domínio). As telas usam essas constantes, nunca o nome ou o e-mail escritos direto.
+- Ícones do AteliX: `app/icon.png` (512x512, aba do navegador) e `app/apple-icon.png` (180x180, celular). O Next os reconhece pelo nome exato; o `favicon.ico` padrão foi removido. O middleware libera só os caminhos exatos `/icon.png` e `/apple-icon.png`, antes do `getUser` (sem isso, quem não está logado seria mandado para `/login` em vez de receber a imagem).
 - A página `/` só redireciona para `/dashboard` (quem não está logado vai antes para `/login` pelo middleware).
 - Os componentes de produto ficam em `components/produtos/` (a pasta antiga `components/products/` foi removida na Etapa 8).
 - Há cerca de 80 `console.*` de diagnóstico e, em 21/11/2026, 13 problemas de lint (10 erros e 3 avisos). Não corrija fora do escopo do prompt.
